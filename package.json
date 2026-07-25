@@ -1,0 +1,19 @@
+{
+  "name": "autoservicepal",
+  "version": "1.0.0",
+  "description": "Cross-platform vehicle service history tracking application",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/mobile-web"
+  ],
+  "scripts": {
+    "backend": "npm run dev --workspace=apps/backend",
+    "test:backend": "npm test --workspace=apps/backend",
+    "test:backend:coverage": "npm run test:coverage --workspace=apps/backend"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
