@@ -1,0 +1,140 @@
+'use strict';
+
+const db = require('../config/database');
+
+/**
+ * GET /api/v1/vehicles
+ * Fetches all vehicles for the authenticated user.
+ */
+async function getVehicles(req, res, next) {
+  try {
+    const userId = req.user.id; // populated by auth middleware
+    const vehicles = await db('vehicles')
+      .where({ owner_id: userId })
+      .orderBy('created_at', 'asc');
+
+    return res.status(200).json({
+      status: 'success',
+      data: { vehicles },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * POST /api/v1/vehicles
+ * Adds a new vehicle to the user's account.
+ */
+async function addVehicle(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { registration_number, make, model, sub_model, colour } = req.body;
+
+    if (!registration_number) {
+      return res.status(400).json({ status: 'error', message: 'registration_number is required.' });
+    }
+
+    const [vehicle] = await db('vehicles')
+      .insert({
+        owner_id: userId,
+        registration_number: registration_number.toUpperCase(),
+        make,
+        model,
+        sub_model,
+        colour,
+        is_v5_verified: false,
+        v5_status: 'UNVERIFIED',
+      })
+      .returning('*');
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Vehicle added successfully.',
+      data: { vehicle },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * DELETE /api/v1/vehicles/:id
+ * Deletes a vehicle and associated records (cascade).
+ */
+async function deleteVehicle(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const vehicleId = req.params.id;
+
+    const deletedCount = await db('vehicles')
+      .where({ id: vehicleId, owner_id: userId })
+      .del();
+
+    if (deletedCount === 0) {
+      return res.status(404).json({ status: 'error', message: 'Vehicle not found or unauthorized.' });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Vehicle deleted successfully.',
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * POST /api/v1/vehicles/:id/v5
+ * Uploads a V5 document for verification.
+ * Expects a multipart/form-data with a file field named "v5_image".
+ */
+async function uploadV5(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const vehicleId = req.params.id;
+
+    if (!req.file) {
+      return res.status(400).json({ status: 'error', message: 'No V5 image uploaded.' });
+    }
+
+    // Verify ownership
+    const vehicle = await db('vehicles').where({ id: vehicleId, owner_id: userId }).first();
+    if (!vehicle) {
+      return res.status(404).json({ status: 'error', message: 'Vehicle not found.' });
+    }
+
+    if (vehicle.v5_status === 'PENDING') {
+      return res.status(400).json({ status: 'error', message: 'A V5 verification is already pending for this vehicle.' });
+    }
+
+    if (vehicle.is_v5_verified) {
+      return res.status(400).json({ status: 'error', message: 'Vehicle is already verified.' });
+    }
+
+    const imageUrl = `/public/uploads/${req.file.filename}`;
+
+    // Insert verification request and update vehicle status in a transaction
+    await db.transaction(async (trx) => {
+      await trx('v5_verifications').insert({
+        vehicle_id: vehicleId,
+        user_id: userId,
+        v5_image_url: imageUrl,
+        status: 'PENDING',
+      });
+
+      await trx('vehicles')
+        .where({ id: vehicleId })
+        .update({ v5_status: 'PENDING' });
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'V5 document uploaded successfully. Pending verification within 2 hours.',
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { getVehicles, addVehicle, deleteVehicle, uploadV5 };
