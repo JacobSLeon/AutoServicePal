@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLazyLookupVehicleQuery, useAddVehicleMutation } from '../store/api/apiSlice';
 import { addVehicle as addLocalVehicle } from '../store/slices/vehicleSlice';
@@ -78,77 +78,154 @@ export default function AddVehicleScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Enter Registration Number</Text>
-      <View style={styles.inputRow}>
+      
+      <View style={styles.plateInputContainer}>
+        <View style={styles.ukPlateBlueBandLarge}>
+          <Text style={styles.ukPlateGBLarge}>GB</Text>
+        </View>
         <TextInput
-          style={styles.input}
-          placeholder="e.g. AB12 CDE"
+          style={styles.plateInput}
+          placeholder="AB12 CDE"
+          placeholderTextColor="rgba(0,0,0,0.3)"
           value={regNumber}
           onChangeText={setRegNumber}
           autoCapitalize="characters"
+          maxLength={8}
         />
-        <Button title="Lookup" onPress={handleLookup} disabled={isLookingUp} />
       </View>
-
-      {isLookingUp && <ActivityIndicator style={{ marginTop: 20 }} />}
       
-      {error && <Text style={styles.error}>Could not find vehicle details.</Text>}
+      <TouchableOpacity 
+        style={[styles.primaryButton, isLookingUp && styles.disabledBtn]} 
+        onPress={handleLookup}
+        disabled={isLookingUp}
+      >
+        <Text style={styles.primaryButtonText}>{isLookingUp ? "Searching..." : "Lookup Vehicle"}</Text>
+      </TouchableOpacity>
+      
+      {error && <Text style={styles.error}>Could not find vehicle details. Please check the registration.</Text>}
 
       {data && (
         <View style={styles.detailsCard}>
           <Text style={styles.title}>{data.make} {data.model}</Text>
-          <Text>Colour: {data.colour}</Text>
-          <Text>MOT: {data.motStatus} ({data.motExpiryDate})</Text>
-          <Text>Tax: {data.taxStatus} ({data.taxDueDate})</Text>
           
-          <View style={{ marginTop: 20 }}>
-            <Button title="Add to Garage" onPress={handleAdd} color="#4CAF50" />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Colour:</Text>
+            <Text style={styles.detailValue}>{data.colour}</Text>
           </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>MOT:</Text>
+            <Text style={styles.detailValue}>{data.motStatus} ({data.motExpiryDate})</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Tax:</Text>
+            <Text style={styles.detailValue}>{data.taxStatus} ({data.taxDueDate})</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.successButton} onPress={handleAdd}>
+            <Text style={styles.primaryButtonText}>Add to Garage</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
   );
 }
 
+import { theme } from '../utils/theme';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.background,
   },
   label: {
-    fontSize: 16,
-    marginBottom: 8,
+    ...theme.typography.h3,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
   },
-  inputRow: {
+  plateInputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
+    backgroundColor: theme.colors.plateYellow,
     borderRadius: 8,
-    marginRight: 10,
-    fontSize: 18,
-    textTransform: 'uppercase',
+    borderWidth: 3,
+    borderColor: '#000',
+    alignItems: 'stretch',
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginBottom: theme.spacing.xl,
+    width: '80%',
+    ...theme.shadows.glass,
+  },
+  ukPlateBlueBandLarge: {
+    backgroundColor: '#003399',
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  ukPlateGBLarge: {
+    color: '#FFD700',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  plateInput: {
+    flex: 1,
+    ...theme.typography.plate,
+    fontSize: 32,
+    textAlign: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    ...theme.shadows.subtle,
+  },
+  successButton: {
+    backgroundColor: theme.colors.secondary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    ...theme.shadows.subtle,
+  },
+  primaryButtonText: {
+    ...theme.typography.h3,
+    color: '#000', // for secondary button mostly
+  },
+  disabledBtn: {
+    opacity: 0.5,
   },
   error: {
-    color: 'red',
-    marginTop: 10,
+    color: theme.colors.error,
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
   },
   detailsCard: {
-    marginTop: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
+    marginTop: theme.spacing.xl,
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.glass,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    ...theme.typography.h2,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.lg,
+    textAlign: 'center',
   },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  detailLabel: {
+    ...theme.typography.bodySecondary,
+  },
+  detailValue: {
+    ...theme.typography.body,
+    fontWeight: 'bold',
+  }
 });

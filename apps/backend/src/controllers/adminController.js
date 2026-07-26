@@ -68,7 +68,7 @@ async function getPendingReviews(req, res, next) {
       .join('users', 'v5_verifications.user_id', 'users.id')
       .select(
         'v5_verifications.id as v5_id',
-        'v5_verifications.document_url',
+        'v5_verifications.v5_image_url',
         'vehicles.registration_number',
         'vehicles.make',
         'vehicles.model',

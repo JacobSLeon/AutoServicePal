@@ -66,6 +66,7 @@ export const apiSlice = createApi({
         method: 'POST',
         body: formData,
       }),
+    }),
     addVehicle: builder.mutation<any, any>({
       query: (vehicleData) => ({
         url: '/vehicles',
@@ -75,6 +76,23 @@ export const apiSlice = createApi({
     }),
     getVehicles: builder.query<any, void>({
       query: () => '/vehicles',
+    }),
+    getPendingReviews: builder.query<any, void>({
+      query: () => '/admin/pending',
+    }),
+    reviewV5: builder.mutation<any, { id: string; status: string; rejection_reason?: string }>({
+      query: ({ id, ...body }) => ({
+        url: `/admin/v5-review/${id}`,
+        method: 'POST',
+        body,
+      }),
+    }),
+    verifyWorkItem: builder.mutation<any, { id: string; status: string; admin_note?: string }>({
+      query: ({ id, ...body }) => ({
+        url: `/admin/work-item/${id}/verify`,
+        method: 'POST',
+        body,
+      }),
     }),
   }),
 });
@@ -90,5 +108,8 @@ export const {
   useAddServiceRecordMutation,
   useUploadServiceProofsMutation,
   useAddVehicleMutation,
-  useLazyGetVehiclesQuery
+  useLazyGetVehiclesQuery,
+  useGetPendingReviewsQuery,
+  useReviewV5Mutation,
+  useVerifyWorkItemMutation
 } = apiSlice;

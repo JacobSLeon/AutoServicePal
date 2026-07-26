@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Button, ScrollView, Switch, Image, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Button, ScrollView, Switch, Image, ActivityIndicator, Platform, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -129,137 +129,271 @@ export default function AddServiceScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.label}>Service Date (YYYY-MM-DD)</Text>
-      <TextInput
-        style={styles.input}
-        value={date}
-        onChangeText={setDate}
-        placeholder="e.g. 2026-07-26"
-      />
-
-      <View style={styles.switchRow}>
-        <Text style={styles.label}>Service Type: {isDealer ? 'Dealer' : 'Self-Performed'}</Text>
-        <Switch
-          value={isDealer}
-          onValueChange={setIsDealer}
+      <View style={styles.card}>
+        <Text style={styles.label}>Service Date</Text>
+        <TextInput
+          style={styles.input}
+          value={date}
+          onChangeText={setDate}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={theme.colors.textSecondary}
         />
+
+        <Text style={styles.label}>Service Type</Text>
+        <View style={styles.typeSelectorRow}>
+          <TouchableOpacity 
+            style={[styles.typeBtn, isDealer && styles.typeBtnActive]} 
+            onPress={() => setIsDealer(true)}
+          >
+            <Text style={[styles.typeBtnText, isDealer && styles.typeBtnTextActive]}>🏢 Dealer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.typeBtn, !isDealer && styles.typeBtnActive]} 
+            onPress={() => setIsDealer(false)}
+          >
+            <Text style={[styles.typeBtnText, !isDealer && styles.typeBtnTextActive]}>🔧 Self-Performed</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Work Items</Text>
-      {STANDARD_ITEMS.map((item) => (
-        <View key={item.key} style={styles.checkboxRow}>
-          <Switch
-            value={!!selectedItems[item.key]}
-            onValueChange={() => toggleItem(item.key)}
-          />
-          <Text style={styles.checkboxLabel}>{item.label}</Text>
-        </View>
-      ))}
+      <Text style={styles.sectionTitle}>Work Performed</Text>
+      <View style={styles.card}>
+        {STANDARD_ITEMS.map((item) => {
+          const isSelected = !!selectedItems[item.key];
+          return (
+            <TouchableOpacity 
+              key={item.key} 
+              style={[styles.checkboxRow, isSelected && styles.checkboxRowActive]}
+              onPress={() => toggleItem(item.key)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+                {isSelected && <Text style={styles.checkboxTick}>✓</Text>}
+              </View>
+              <Text style={[styles.checkboxLabel, isSelected && styles.checkboxLabelActive]}>{item.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
 
-      {selectedItems['other'] && (
-        <TextInput
-          style={[styles.input, { marginTop: 10 }]}
-          placeholder="Describe 'Other' work..."
-          value={customDescription}
-          onChangeText={setCustomDescription}
-        />
-      )}
+        {selectedItems['other'] && (
+          <TextInput
+            style={[styles.input, { marginTop: theme.spacing.md }]}
+            placeholder="Describe 'Other' work..."
+            placeholderTextColor={theme.colors.textSecondary}
+            value={customDescription}
+            onChangeText={setCustomDescription}
+          />
+        )}
+      </View>
 
       <Text style={styles.sectionTitle}>Proof Images ({images.length}/10)</Text>
-      <Button title="Select Images" onPress={pickImages} />
-      
-      <View style={styles.imageGrid}>
-        {images.map((uri, index) => (
-          <View key={index} style={styles.imageWrapper}>
-            <Image source={{ uri }} style={styles.previewImage} />
-            <Text 
-              style={styles.removeText}
-              onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}
-            >
-              Remove
-            </Text>
-          </View>
-        ))}
+      <View style={styles.card}>
+        <Text style={styles.hintText}>Attach invoices, receipts, or photos of the work done.</Text>
+        
+        <View style={styles.imageGrid}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imageWrapper}>
+              <Image source={{ uri }} style={styles.previewImage} />
+              <TouchableOpacity 
+                style={styles.removeBtn}
+                onPress={() => setImages(prev => prev.filter((_, i) => i !== index))}
+              >
+                <Text style={styles.removeBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          
+          {images.length < 10 && (
+            <TouchableOpacity style={styles.addImageBtn} onPress={pickImages}>
+              <Text style={styles.addImageIcon}>+</Text>
+              <Text style={styles.addImageText}>Add Photo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.submitContainer}>
         {isLoading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         ) : (
-          <Button title="Save Service Record" onPress={handleSubmit} color="#4CAF50" />
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
+            <Text style={styles.primaryButtonText}>Save Service Record</Text>
+          </TouchableOpacity>
         )}
       </View>
     </ScrollView>
   );
 }
 
+import { theme } from '../utils/theme';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+  },
+  card: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.subtle,
   },
   label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    ...theme.typography.h3,
+    marginBottom: theme.spacing.sm,
   },
   input: {
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    fontSize: 16,
+    borderColor: theme.colors.border,
+    color: theme.colors.text,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.lg,
+    ...theme.typography.body,
   },
-  switchRow: {
+  typeSelectorRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+  },
+  typeBtn: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: 'center',
-    marginBottom: 20,
-    backgroundColor: '#f9f9f9',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: theme.colors.glass,
+  },
+  typeBtnActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  typeBtnText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+  },
+  typeBtnTextActive: {
+    color: '#000',
+    fontWeight: 'bold',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    marginTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 4,
+    ...theme.typography.h2,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  checkboxRowActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+    marginRight: theme.spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.glass,
+  },
+  checkboxActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  checkboxTick: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   checkboxLabel: {
-    marginLeft: 10,
-    fontSize: 16,
+    ...theme.typography.body,
+  },
+  checkboxLabelActive: {
+    fontWeight: 'bold',
+    color: theme.colors.primaryLight,
+  },
+  hintText: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
   },
   imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 12,
   },
   imageWrapper: {
-    marginRight: 12,
-    marginBottom: 12,
-    alignItems: 'center',
+    width: '30%',
+    aspectRatio: 1,
+    marginRight: '3%',
+    marginBottom: '3%',
+    borderRadius: theme.borderRadius.sm,
+    overflow: 'hidden',
+    position: 'relative',
   },
   previewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: '100%',
+    height: '100%',
   },
-  removeText: {
-    color: 'red',
-    marginTop: 4,
+  removeBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeBtnText: {
+    color: '#FFF',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  addImageBtn: {
+    width: '30%',
+    aspectRatio: 1,
+    marginRight: '3%',
+    marginBottom: '3%',
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.glass,
+  },
+  addImageIcon: {
+    fontSize: 24,
+    color: theme.colors.textSecondary,
+  },
+  addImageText: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
   },
   submitContainer: {
-    marginTop: 30,
+    marginTop: theme.spacing.xl,
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.pill,
+    alignItems: 'center',
+    ...theme.shadows.subtle,
+  },
+  primaryButtonText: {
+    ...theme.typography.h3,
+    color: '#000',
   }
 });

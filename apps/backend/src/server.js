@@ -24,6 +24,7 @@ validateEnv();
 const { createApp } = require('./app');
 const db = require('./config/database');
 const { getRedisClient } = require('./config/redis');
+const { initCronJobs } = require('./jobs/cronJobs');
 
 const PORT = config.port;
 
@@ -44,6 +45,9 @@ async function startServer() {
   }
 
   const app = createApp();
+
+  // Initialise cron jobs
+  initCronJobs();
 
   const server = app.listen(PORT, () => {
     console.info(`[server] AutoServicePal API running on port ${PORT} (${config.nodeEnv})`);
