@@ -1,6 +1,6 @@
 'use strict';
 
-const db = require('../database');
+const db = require('../config/database');
 
 /**
  * Helper to fetch a single service record by ID along with its work items and proofs
@@ -85,7 +85,7 @@ async function getServiceHistory(req, res, next) {
     
     // Make sure user owns the vehicle
     const vehicle = await db('vehicles')
-      .where({ id: vehicleId, user_id: req.user.id })
+      .where({ id: vehicleId, owner_id: req.user.id })
       .first();
       
     if (!vehicle) {

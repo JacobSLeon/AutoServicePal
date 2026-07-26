@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button, Alert } from 'react-native';
+import { View, Text, StyleSheet, Button, Platform } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { removeVehicle } from '../store/slices/vehicleSlice';
 import * as ImagePicker from 'expo-image-picker';
 import { useUploadV5Mutation } from '../store/api/apiSlice';
+import { crossPlatformAlert } from '../utils/alert';
 
 export default function VehicleDetailsScreen({ route, navigation }: any) {
   const { vehicleId } = route.params;
@@ -25,7 +26,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
   }
 
   const handleRemove = () => {
-    Alert.alert('Remove Vehicle', 'Are you sure you want to remove this vehicle from your garage?', [
+    crossPlatformAlert('Remove Vehicle', 'Are you sure you want to remove this vehicle from your garage?', [
       { text: 'Cancel', style: 'cancel' },
       { 
         text: 'Remove', 
@@ -38,16 +39,24 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     ]);
   };
 
+  const handleViewServiceHistory = () => {
+    if (vehicle.isGuest) {
+      crossPlatformAlert('Authentication Required', 'You must create an account to view service history.');
+      return;
+    }
+    navigation.navigate('ServiceHistory', { vehicleId: vehicle.id });
+  };
+
   const handleUploadV5 = async () => {
     if (vehicle.isGuest) {
-      Alert.alert('Authentication Required', 'You must be logged in to upload V5 documents.');
+      crossPlatformAlert('Authentication Required', 'You must be logged in to upload V5 documents.');
       return;
     }
 
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Denied', 'You need to grant camera roll permissions to upload an image.');
+      crossPlatformAlert('Permission Denied', 'You need to grant camera roll permissions to upload an image.');
       return;
     }
 
@@ -61,20 +70,40 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
       const asset = result.assets[0];
       
       const formData = new FormData();
-      // Required format for React Native fetch with FormData
-      formData.append('v5Image', {
-        uri: asset.uri,
-        name: 'v5_document.jpg',
-        type: 'image/jpeg'
-      } as any);
+      
+      if (Platform.OS === 'web') {
+        try {
+          const response = await fetch(asset.uri);
+          const blob = await response.blob();
+          formData.append('v5_image', blob, 'v5_document.jpg');
+        } catch (e) {
+          console.error('Failed to convert to blob:', e);
+          crossPlatformAlert('Error', 'Failed to process image on web.');
+          return;
+        }
+      } else {
+        formData.append('v5_image', {
+          uri: asset.uri,
+          name: 'v5_document.jpg',
+          type: 'image/jpeg'
+        } as any);
+      }
 
       try {
         await uploadV5({ vehicleId: vehicle.id, formData }).unwrap();
-        Alert.alert('Success', 'V5 document uploaded and is awaiting verification.');
+        crossPlatformAlert('Success', 'V5 document uploaded and is awaiting verification.');
       } catch (err) {
-        Alert.alert('Upload Failed', 'There was an error uploading your document.');
+        crossPlatformAlert('Upload Failed', 'There was an error uploading your document.');
       }
     }
+  };
+
+  const handleAddServiceRecord = () => {
+    if (vehicle.isGuest) {
+      crossPlatformAlert('Authentication Required', 'You must create an account to save service records.');
+      return;
+    }
+    navigation.navigate('AddService', { vehicleId: vehicle.id });
   };
 
   return (
@@ -92,13 +121,13 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
       <View style={styles.actions}>
         <Button 
           title="View Service History" 
-          onPress={() => navigation.navigate('ServiceHistory', { vehicleId: vehicle.id })} 
+          onPress={handleViewServiceHistory} 
         />
         <View style={{ height: 16 }} />
         <Button 
           title="Add Service Record" 
           color="#4CAF50"
-          onPress={() => navigation.navigate('AddService', { vehicleId: vehicle.id })} 
+          onPress={handleAddServiceRecord} 
         />
         <View style={{ height: 16 }} />
         <Button 

@@ -137,4 +137,60 @@ async function uploadV5(req, res, next) {
   }
 }
 
-module.exports = { getVehicles, addVehicle, deleteVehicle, uploadV5 };
+/**
+ * POST /api/v1/vehicles/sync
+ * Syncs an array of guest vehicles to the user's account.
+ */
+async function syncVehicles(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { vehicles } = req.body;
+
+    if (!Array.isArray(vehicles) || vehicles.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'No vehicles provided for sync.' });
+    }
+
+    // Insert all vehicles
+    await db.transaction(async (trx) => {
+      for (const v of vehicles) {
+        await trx('vehicles').insert({
+          owner_id: userId,
+          registration_number: v.registrationNumber.toUpperCase(),
+          make: v.make,
+          model: v.model,
+          sub_model: v.sub_model || null,
+          colour: v.colour,
+          is_v5_verified: false,
+          v5_status: 'UNVERIFIED',
+        });
+      }
+    });
+
+    // Return the updated list of all vehicles for this user
+    const updatedVehicles = await db('vehicles')
+      .where({ owner_id: userId })
+      .orderBy('created_at', 'asc');
+
+    // Convert db column names back to frontend camelCase format
+    const formattedVehicles = updatedVehicles.map(v => ({
+      id: v.id,
+      registrationNumber: v.registration_number,
+      make: v.make,
+      model: v.model,
+      colour: v.colour,
+      motStatus: 'Unknown', // Need DVLA api data for this, defaulting
+      taxStatus: 'Unknown',
+      isVerified: v.is_v5_verified,
+    }));
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Vehicles synced successfully.',
+      data: { vehicles: formattedVehicles },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { getVehicles, addVehicle, deleteVehicle, uploadV5, syncVehicles };

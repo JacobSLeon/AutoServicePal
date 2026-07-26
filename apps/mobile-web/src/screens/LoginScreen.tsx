@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLoginMutation, useSyncVehiclesMutation } from '../store/api/apiSlice';
+import { useLoginMutation, useSyncVehiclesMutation, useLazyGetVehiclesQuery } from '../store/api/apiSlice';
 import { setCredentials } from '../store/slices/authSlice';
 import { RootState } from '../store/store';
 import { setVehicles } from '../store/slices/vehicleSlice';
+import { crossPlatformAlert } from '../utils/alert';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -12,13 +13,14 @@ export default function LoginScreen({ navigation }: any) {
   
   const [login, { isLoading }] = useLoginMutation();
   const [syncVehicles] = useSyncVehiclesMutation();
+  const [getVehicles] = useLazyGetVehiclesQuery();
   const dispatch = useDispatch();
 
   const localVehicles = useSelector((state: RootState) => state.vehicles.vehicles);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      crossPlatformAlert('Error', 'Please enter both email and password');
       return;
     }
 
@@ -35,12 +37,8 @@ export default function LoginScreen({ navigation }: any) {
       const guestVehicles = localVehicles.filter(v => v.isGuest);
       if (guestVehicles.length > 0) {
         try {
-          // Send guest vehicles to backend
           const syncResponse = await syncVehicles(guestVehicles).unwrap();
-          
-          // Assuming backend returns the full merged list of vehicles for this user
           if (syncResponse.data && Array.isArray(syncResponse.data.vehicles)) {
-             // Map them back to our local format, removing 'isGuest' flag
              const mergedVehicles = syncResponse.data.vehicles.map((v: any) => ({
                 id: v.id.toString(),
                 registrationNumber: v.registrationNumber,
@@ -56,17 +54,38 @@ export default function LoginScreen({ navigation }: any) {
              }));
              dispatch(setVehicles(mergedVehicles));
           }
-          Alert.alert('Sync Complete', 'Your guest vehicles have been saved to your account!');
+          crossPlatformAlert('Sync Complete', 'Your guest vehicles have been saved to your account!');
         } catch (syncErr) {
           console.error('Error syncing vehicles:', syncErr);
-          Alert.alert('Sync Warning', 'Logged in, but failed to sync guest vehicles. They remain on your device.');
+          crossPlatformAlert('Sync Warning', 'Logged in, but failed to sync guest vehicles. You may need to re-add them.');
+        }
+      } else {
+        // No guest vehicles to sync, but we should fetch their existing cloud garage!
+        try {
+          const cloudVehicles = await getVehicles().unwrap();
+          if (cloudVehicles.data && Array.isArray(cloudVehicles.data.vehicles)) {
+             const mappedVehicles = cloudVehicles.data.vehicles.map((v: any) => ({
+                id: v.id.toString(),
+                registrationNumber: v.registration_number,
+                make: v.make,
+                model: v.model,
+                colour: v.colour,
+                motStatus: 'Unknown',
+                taxStatus: 'Unknown',
+                isVerified: v.is_v5_verified || false,
+                isGuest: false,
+             }));
+             dispatch(setVehicles(mappedVehicles));
+          }
+        } catch (getErr) {
+          console.error('Error fetching vehicles:', getErr);
         }
       }
 
       navigation.navigate('MainTabs');
     } catch (err: any) {
       const message = err?.data?.message || 'Login failed. Please check your credentials.';
-      Alert.alert('Login Failed', message);
+      crossPlatformAlert('Login Failed', message);
     }
   };
 

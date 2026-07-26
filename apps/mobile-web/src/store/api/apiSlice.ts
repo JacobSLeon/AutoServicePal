@@ -66,6 +66,15 @@ export const apiSlice = createApi({
         method: 'POST',
         body: formData,
       }),
+    addVehicle: builder.mutation<any, any>({
+      query: (vehicleData) => ({
+        url: '/vehicles',
+        method: 'POST',
+        body: vehicleData,
+      }),
+    }),
+    getVehicles: builder.query<any, void>({
+      query: () => '/vehicles',
     }),
   }),
 });
@@ -79,5 +88,7 @@ export const {
   useSyncVehiclesMutation,
   useGetServiceHistoryQuery,
   useAddServiceRecordMutation,
-  useUploadServiceProofsMutation
+  useUploadServiceProofsMutation,
+  useAddVehicleMutation,
+  useLazyGetVehiclesQuery
 } = apiSlice;

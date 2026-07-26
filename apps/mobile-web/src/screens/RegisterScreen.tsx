@@ -1,34 +1,70 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { useRegisterMutation } from '../store/api/apiSlice';
+import { crossPlatformAlert } from '../utils/alert';
 
 export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullNameV5, setFullNameV5] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   
   const [register, { isLoading }] = useRegisterMutation();
 
   const handleRegister = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!email || !password || !fullNameV5 || !passwordConfirmation) {
+      crossPlatformAlert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      crossPlatformAlert('Error', 'Passwords do not match');
       return;
     }
 
     try {
-      await register({ email, password }).unwrap();
-      Alert.alert('Success', 'Account created successfully! Please log in.', [
+      await register({ 
+        email, 
+        password, 
+        full_name_v5: fullNameV5,
+        password_confirmation: passwordConfirmation 
+      }).unwrap();
+      crossPlatformAlert('Success', 'Account created successfully! Please log in.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') }
       ]);
     } catch (err: any) {
-      const message = err?.data?.message || 'Registration failed. Please check the rules (8+ chars, 1 uppercase, 1 number).';
-      Alert.alert('Registration Failed', message);
+      console.error('Registration error:', err);
+      
+      let message = 'Registration failed. Please check your details.';
+      
+      // Handle 409 Conflict (Email already exists)
+      if (err?.status === 409) {
+        message = 'An account with this email already exists.';
+      } 
+      // Handle validation errors from backend
+      else if (err?.data?.errors && Array.isArray(err.data.errors)) {
+        message = err.data.errors.map((e: any) => e.message).join('\n');
+      } 
+      // Fallback to standard message
+      else if (err?.data?.message) {
+        message = err.data.message;
+      }
+
+      crossPlatformAlert('Registration Failed', message);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Create Account</Text>
       
+      <TextInput
+        style={styles.input}
+        placeholder="Full Name (As on V5 logbook)"
+        value={fullNameV5}
+        onChangeText={setFullNameV5}
+        autoCapitalize="words"
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -44,6 +80,13 @@ export default function RegisterScreen({ navigation }: any) {
         onChangeText={setPassword}
         secureTextEntry
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm Password"
+        value={passwordConfirmation}
+        onChangeText={setPasswordConfirmation}
+        secureTextEntry
+      />
       <Text style={styles.hint}>Password must be at least 8 characters long, contain 1 uppercase letter and 1 number.</Text>
 
       {isLoading ? (
@@ -56,7 +99,7 @@ export default function RegisterScreen({ navigation }: any) {
         <Text>Already have an account? </Text>
         <Button title="Login" onPress={() => navigation.navigate('Login')} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

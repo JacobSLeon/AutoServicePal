@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, FlatList } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { reorderVehicles } from '../store/slices/vehicleSlice';
@@ -21,23 +21,58 @@ export default function HomeScreen({ navigation }: any) {
     );
   }, [vehicles, searchQuery]);
 
-  const renderItem = ({ item, drag, isActive }: RenderItemParams<any>) => {
+  const moveVehicle = (index: number, direction: 'up' | 'down') => {
+    if (searchQuery) return;
+    const newVehicles = [...vehicles];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newVehicles.length) return;
+    
+    const temp = newVehicles[index];
+    newVehicles[index] = newVehicles[targetIndex];
+    newVehicles[targetIndex] = temp;
+    
+    dispatch(reorderVehicles(newVehicles));
+  };
+
+  const renderItemContent = (item: any, drag: any, isActive: boolean, getIndex: any) => {
+    const index = getIndex ? getIndex() : 0;
+    return (
+      <TouchableOpacity
+        style={[styles.card, isActive && { backgroundColor: '#e0e0e0' }]}
+        onLongPress={drag}
+        onPress={() => navigation.navigate('VehicleDetails', { vehicleId: item.id })}
+        activeOpacity={1}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.regText}>{item.registrationNumber}</Text>
+          {Platform.OS === 'web' && !searchQuery && (
+            <View style={styles.webOrderButtons}>
+              <TouchableOpacity onPress={() => moveVehicle(index, 'up')} style={styles.arrowBtn}>
+                <Text>⬆️</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => moveVehicle(index, 'down')} style={styles.arrowBtn}>
+                <Text>⬇️</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        <Text>{item.make} {item.model}</Text>
+        {item.isGuest ? (
+          <Text style={styles.guestBadge}>Guest Data (Not Synced)</Text>
+        ) : (
+          <Text style={styles.syncedBadge}>Synced to Cloud ✅</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderItem = ({ item, drag, isActive, getIndex }: any) => {
+    if (Platform.OS === 'web') {
+      return renderItemContent(item, drag, isActive, getIndex);
+    }
     return (
       <ScaleDecorator>
-        <TouchableOpacity
-          style={[styles.card, isActive && { backgroundColor: '#e0e0e0' }]}
-          onLongPress={drag}
-          onPress={() => navigation.navigate('VehicleDetails', { vehicleId: item.id })}
-          activeOpacity={1}
-        >
-          <Text style={styles.regText}>{item.registrationNumber}</Text>
-          <Text>{item.make} {item.model}</Text>
-          {item.isGuest ? (
-            <Text style={styles.guestBadge}>Guest Data (Not Synced)</Text>
-          ) : (
-            <Text style={styles.syncedBadge}>Synced to Cloud ✅</Text>
-          )}
-        </TouchableOpacity>
+        {renderItemContent(item, drag, isActive, getIndex)}
       </ScaleDecorator>
     );
   };
@@ -58,11 +93,17 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.emptyText}>Your garage is empty.</Text>
           <Text style={styles.subText}>Add a vehicle to start tracking service history.</Text>
         </View>
+      ) : Platform.OS === 'web' ? (
+        <FlatList
+          data={filteredVehicles}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item, index }) => renderItem({ item, getIndex: () => index })}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
       ) : (
         <DraggableFlatList
           data={filteredVehicles}
           onDragEnd={({ data }) => {
-            // Only allow reordering if we are not actively filtering
             if (!searchQuery) {
               dispatch(reorderVehicles(data));
             }
@@ -115,10 +156,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   regText: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 4,
+  },
+  webOrderButtons: {
+    flexDirection: 'row',
+  },
+  arrowBtn: {
+    padding: 4,
+    marginLeft: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
   },
   guestBadge: {
     marginTop: 8,

@@ -13,6 +13,9 @@ router.use(authenticateToken);
 // GET /api/v1/vehicles
 router.get('/', vehicleController.getVehicles);
 
+// POST /api/v1/vehicles/sync
+router.post('/sync', vehicleController.syncVehicles);
+
 // POST /api/v1/vehicles
 router.post('/', vehicleController.addVehicle);
 

@@ -1,38 +1,77 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useDispatch } from 'react-redux';
-import { useLazyLookupVehicleQuery } from '../store/api/apiSlice';
-import { addVehicle } from '../store/slices/vehicleSlice';
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLazyLookupVehicleQuery, useAddVehicleMutation } from '../store/api/apiSlice';
+import { addVehicle as addLocalVehicle } from '../store/slices/vehicleSlice';
+import { RootState } from '../store/store';
+import { crossPlatformAlert } from '../utils/alert';
 
 export default function AddVehicleScreen({ navigation }: any) {
   const [regNumber, setRegNumber] = useState('');
-  const [triggerLookup, { data, isLoading, error }] = useLazyLookupVehicleQuery();
+  const [triggerLookup, { data, isLoading: isLookingUp, error }] = useLazyLookupVehicleQuery();
+  const [addVehicleToCloud, { isLoading: isAdding }] = useAddVehicleMutation();
   const dispatch = useDispatch();
+
+  const token = useSelector((state: RootState) => state.auth.token);
+  const isAuthenticated = !!token;
 
   const handleLookup = () => {
     if (!regNumber.trim()) return;
     triggerLookup(regNumber.toUpperCase());
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (data) {
-      // Mock mapping to vehicle slice format
-      dispatch(addVehicle({
-        id: new Date().getTime().toString(),
-        registrationNumber: data.registrationNumber,
-        make: data.make,
-        model: data.model || 'Unknown Model',
-        colour: data.colour,
-        motStatus: data.motStatus,
-        motDueDate: data.motExpiryDate,
-        taxStatus: data.taxStatus,
-        taxDueDate: data.taxDueDate,
-        isVerified: false,
-        isGuest: true, // For now, everything added here is local guest data
-      }));
-      Alert.alert('Success', 'Vehicle added to your local garage.', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      if (isAuthenticated) {
+        try {
+          const response = await addVehicleToCloud({
+            registration_number: data.registrationNumber,
+            make: data.make,
+            model: data.model || 'Unknown Model',
+            sub_model: null,
+            colour: data.colour,
+          }).unwrap();
+          
+          const v = response.data.vehicle;
+          
+          dispatch(addLocalVehicle({
+            id: v.id.toString(),
+            registrationNumber: v.registration_number,
+            make: v.make,
+            model: v.model,
+            colour: v.colour,
+            motStatus: data.motStatus || 'Unknown',
+            motDueDate: data.motExpiryDate || 'Unknown',
+            taxStatus: data.taxStatus || 'Unknown',
+            taxDueDate: data.taxDueDate || 'Unknown',
+            isVerified: false,
+            isGuest: false,
+          }));
+          
+          crossPlatformAlert('Success', 'Vehicle added to your account.', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } catch (err: any) {
+          crossPlatformAlert('Error', err?.data?.message || 'Failed to add vehicle to your account.');
+        }
+      } else {
+        dispatch(addLocalVehicle({
+          id: new Date().getTime().toString(),
+          registrationNumber: data.registrationNumber,
+          make: data.make,
+          model: data.model || 'Unknown Model',
+          colour: data.colour,
+          motStatus: data.motStatus,
+          motDueDate: data.motExpiryDate,
+          taxStatus: data.taxStatus,
+          taxDueDate: data.taxDueDate,
+          isVerified: false,
+          isGuest: true,
+        }));
+        crossPlatformAlert('Success', 'Vehicle added locally as a Guest.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
     }
   };
 
@@ -47,10 +86,10 @@ export default function AddVehicleScreen({ navigation }: any) {
           onChangeText={setRegNumber}
           autoCapitalize="characters"
         />
-        <Button title="Lookup" onPress={handleLookup} disabled={isLoading} />
+        <Button title="Lookup" onPress={handleLookup} disabled={isLookingUp} />
       </View>
 
-      {isLoading && <ActivityIndicator style={{ marginTop: 20 }} />}
+      {isLookingUp && <ActivityIndicator style={{ marginTop: 20 }} />}
       
       {error && <Text style={styles.error}>Could not find vehicle details.</Text>}
 

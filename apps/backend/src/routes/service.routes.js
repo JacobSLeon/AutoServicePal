@@ -2,13 +2,13 @@
 
 const express = require('express');
 const serviceController = require('../controllers/serviceController');
-const { authenticate } = require('../middlewares/auth');
+const { authenticateToken } = require('../middlewares/auth');
 const upload = require('../middlewares/upload');
 
 const router = express.Router();
 
 // All service routes require authentication
-router.use(authenticate);
+router.use(authenticateToken);
 
 // POST /api/v1/services
 // Add a new service record with work items

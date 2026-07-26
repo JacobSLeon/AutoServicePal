@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Button, ScrollView, Switch, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Button, ScrollView, Switch, Image, ActivityIndicator, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 import { useAddServiceRecordMutation, useUploadServiceProofsMutation } from '../store/api/apiSlice';
 import { compressImage } from '../utils/imageCompressor';
+import { crossPlatformAlert } from '../utils/alert';
 
 const STANDARD_ITEMS = [
   { key: 'oil_filter', label: 'Oil & Filter' },
@@ -15,6 +18,10 @@ const STANDARD_ITEMS = [
 
 export default function AddServiceScreen({ route, navigation }: any) {
   const { vehicleId } = route.params;
+  
+  const vehicle = useSelector((state: RootState) => 
+    state.vehicles.vehicles.find(v => v.id === vehicleId)
+  );
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isDealer, setIsDealer] = useState(true);
@@ -34,7 +41,7 @@ export default function AddServiceScreen({ route, navigation }: any) {
 
   const pickImages = async () => {
     if (images.length >= 10) {
-      Alert.alert('Limit Reached', 'You can only upload up to 10 images.');
+      crossPlatformAlert('Limit Reached', 'You can only upload up to 10 images.');
       return;
     }
 
@@ -51,6 +58,11 @@ export default function AddServiceScreen({ route, navigation }: any) {
   };
 
   const handleSubmit = async () => {
+    if (vehicle?.isGuest) {
+      crossPlatformAlert('Authentication Required', 'You must create an account to save service records.');
+      return;
+    }
+
     // Validation
     const workItems = Object.keys(selectedItems)
       .filter(key => selectedItems[key])
@@ -60,7 +72,7 @@ export default function AddServiceScreen({ route, navigation }: any) {
       }));
 
     if (workItems.length === 0) {
-      Alert.alert('Validation Error', 'Please select at least one work item.');
+      crossPlatformAlert('Validation Error', 'Please select at least one work item.');
       return;
     }
 
@@ -83,23 +95,33 @@ export default function AddServiceScreen({ route, navigation }: any) {
           const compressedUri = await compressImage(images[i]);
           const filename = compressedUri.split('/').pop() || `image_${i}.jpg`;
           
-          formData.append('images', {
-            uri: compressedUri,
-            name: filename,
-            type: 'image/jpeg'
-          } as any);
+          if (Platform.OS === 'web') {
+            try {
+              const response = await fetch(compressedUri);
+              const blob = await response.blob();
+              formData.append('images', blob, filename);
+            } catch (e) {
+              console.error('Failed to process image on web:', e);
+            }
+          } else {
+            formData.append('images', {
+              uri: compressedUri,
+              name: filename,
+              type: 'image/jpeg'
+            } as any);
+          }
         }
 
         await uploadServiceProofs({ serviceId, formData }).unwrap();
       }
 
-      Alert.alert('Success', 'Service record added successfully!', [
+      crossPlatformAlert('Success', 'Service record added successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
 
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Error', err?.data?.message || 'Failed to add service record.');
+      crossPlatformAlert('Error', err?.data?.message || 'Failed to add service record.');
     }
   };
 
