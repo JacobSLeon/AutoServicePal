@@ -9,24 +9,29 @@
  */
 
 const express = require('express');
+
+const authRoutes = require('./auth.routes');
+const vehicleRoutes = require('./vehicle.routes');
+const dvlaRoutes = require('./dvla.routes');
+const adminRoutes = require('./admin.routes');
+const serviceRoutes = require('./service.routes');
+
 const router = express.Router();
 
-// Phase 1 — Auth
-const authRoutes = require('./auth.routes');
+// Base API route for health check
+router.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'AutoServicePal API is running',
+    version: '1.0',
+  });
+});
+
+// Register route modules
 router.use('/auth', authRoutes);
-
-// Phase 2
-const dvlaRoutes = require('./dvla.routes');
-const vehicleRoutes = require('./vehicle.routes');
-router.use('/dvla', dvlaRoutes);
 router.use('/vehicles', vehicleRoutes);
-
-// Phase 3
-// const serviceRoutes = require('./service.routes');
-// router.use('/services', serviceRoutes);
-
-// Phase 4
-const adminRoutes = require('./admin.routes');
+router.use('/dvla', dvlaRoutes);
 router.use('/admin', adminRoutes);
+router.use('/services', serviceRoutes);
 
 module.exports = router;
