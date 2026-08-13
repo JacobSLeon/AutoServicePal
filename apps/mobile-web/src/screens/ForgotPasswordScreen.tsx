@@ -93,7 +93,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.glass,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.text,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing.lg,

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLazyLookupVehicleQuery, useAddVehicleMutation } from '../store/api/apiSlice';
 import { addVehicle as addLocalVehicle } from '../store/slices/vehicleSlice';
 import { RootState } from '../store/store';
+import Button from '../components/Button';
+import Card from '../components/Card';
 import { crossPlatformAlert } from '../utils/alert';
 
 export default function AddVehicleScreen({ navigation }: any) {
@@ -94,18 +96,17 @@ export default function AddVehicleScreen({ navigation }: any) {
         />
       </View>
       
-      <TouchableOpacity 
-        style={[styles.primaryButton, isLookingUp && styles.disabledBtn]} 
+      <Button
+        title={isLookingUp ? "Searching..." : "Lookup Vehicle"}
         onPress={handleLookup}
         disabled={isLookingUp}
-      >
-        <Text style={styles.primaryButtonText}>{isLookingUp ? "Searching..." : "Lookup Vehicle"}</Text>
-      </TouchableOpacity>
+        isLoading={isLookingUp}
+      />
       
       {error && <Text style={styles.error}>Could not find vehicle details. Please check the registration.</Text>}
 
       {data && (
-        <View style={styles.detailsCard}>
+        <Card style={{ marginTop: theme.spacing.xl }}>
           <Text style={styles.title}>{data.make} {data.model}</Text>
           
           <View style={styles.detailRow}>
@@ -121,10 +122,13 @@ export default function AddVehicleScreen({ navigation }: any) {
             <Text style={styles.detailValue}>{data.taxStatus} ({data.taxDueDate})</Text>
           </View>
           
-          <TouchableOpacity style={styles.successButton} onPress={handleAdd}>
-            <Text style={styles.primaryButtonText}>Add to Garage</Text>
-          </TouchableOpacity>
-        </View>
+          <Button
+            title="Add to Garage"
+            variant="secondary"
+            onPress={handleAdd}
+            style={{ marginTop: theme.spacing.md }}
+          />
+        </Card>
       )}
     </View>
   );
@@ -173,39 +177,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: theme.spacing.sm,
   },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    ...theme.shadows.subtle,
-  },
-  successButton: {
-    backgroundColor: theme.colors.secondary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-    ...theme.shadows.subtle,
-  },
-  primaryButtonText: {
-    ...theme.typography.h3,
-    color: '#000', // for secondary button mostly
-  },
-  disabledBtn: {
-    opacity: 0.5,
-  },
   error: {
     color: theme.colors.error,
     marginTop: theme.spacing.md,
     textAlign: 'center',
-  },
-  detailsCard: {
-    marginTop: theme.spacing.xl,
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.lg,
-    ...theme.shadows.glass,
   },
   title: {
     ...theme.typography.h2,

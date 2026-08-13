@@ -31,14 +31,15 @@ async function addVehicle(req, res, next) {
     const userId = req.user.id;
     const { registration_number, make, model, sub_model, colour } = req.body;
 
-    if (!registration_number) {
-      return res.status(400).json({ status: 'error', message: 'registration_number is required.' });
+    const formattedReg = registration_number ? registration_number.replace(/\s+/g, '').toUpperCase() : '';
+    if (!formattedReg || !/^[A-Z0-9]{2,8}$/.test(formattedReg)) {
+      return res.status(400).json({ status: 'error', message: 'Valid registration_number is required.' });
     }
 
     const [vehicle] = await db('vehicles')
       .insert({
         owner_id: userId,
-        registration_number: registration_number.toUpperCase(),
+        registration_number: formattedReg,
         make,
         model,
         sub_model,
@@ -152,10 +153,20 @@ async function syncVehicles(req, res, next) {
 
     // Insert all vehicles
     await db.transaction(async (trx) => {
+      const existingVehicles = await trx('vehicles').where({ owner_id: userId }).select('registration_number');
+      const existingRegs = new Set(existingVehicles.map(v => v.registration_number));
+
       for (const v of vehicles) {
+        if (!v.registrationNumber) continue;
+        const reg = v.registrationNumber.replace(/\s+/g, '').toUpperCase();
+        
+        if (existingRegs.has(reg)) {
+          continue; // Skip duplicate registrations
+        }
+
         await trx('vehicles').insert({
           owner_id: userId,
-          registration_number: v.registrationNumber.toUpperCase(),
+          registration_number: reg,
           make: v.make,
           model: v.model,
           sub_model: v.sub_model || null,
@@ -163,6 +174,7 @@ async function syncVehicles(req, res, next) {
           is_v5_verified: false,
           v5_status: 'UNVERIFIED',
         });
+        existingRegs.add(reg);
       }
     });
 

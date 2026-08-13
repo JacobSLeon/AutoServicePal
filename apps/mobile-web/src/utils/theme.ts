@@ -1,4 +1,4 @@
-export const theme = {
+export const darkTheme = {
   colors: {
     background: '#121212',
     card: '#1E1E1E',
@@ -54,3 +54,29 @@ export const theme = {
     }
   }
 };
+
+export const lightTheme = {
+  colors: {
+    ...darkTheme.colors,
+    background: '#F5F5F5',
+    card: '#FFFFFF',
+    text: '#121212',
+    textSecondary: '#666666',
+    border: '#DDDDDD',
+    glass: 'rgba(0, 0, 0, 0.05)',
+  },
+  spacing: darkTheme.spacing,
+  borderRadius: darkTheme.borderRadius,
+  typography: {
+    ...darkTheme.typography,
+    h1: { ...darkTheme.typography.h1, color: '#121212' },
+    h2: { ...darkTheme.typography.h2, color: '#121212' },
+    h3: { ...darkTheme.typography.h3, color: '#121212' },
+    body: { ...darkTheme.typography.body, color: '#121212' },
+    bodySecondary: { ...darkTheme.typography.bodySecondary, color: '#666666' },
+    caption: { ...darkTheme.typography.caption, color: '#666666' },
+  },
+  shadows: darkTheme.shadows
+};
+
+export const theme = darkTheme; // Default for MVP

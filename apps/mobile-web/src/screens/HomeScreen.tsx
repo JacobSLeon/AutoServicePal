@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { reorderVehicles } from '../store/slices/vehicleSlice';
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
+import InputField from '../components/InputField';
+import UKNumberPlate from '../components/UKNumberPlate';
 
 export default function HomeScreen({ navigation }: any) {
   const vehicles = useSelector((state: RootState) => state.vehicles.vehicles);
@@ -44,12 +46,7 @@ export default function HomeScreen({ navigation }: any) {
         activeOpacity={0.9}
       >
         <View style={styles.cardHeader}>
-          <View style={styles.ukPlate}>
-            <View style={styles.ukPlateBlueBand}>
-              <Text style={styles.ukPlateGB}>GB</Text>
-            </View>
-            <Text style={styles.regText}>{item.registrationNumber.toUpperCase()}</Text>
-          </View>
+          <UKNumberPlate registrationNumber={item.registrationNumber} />
           
           <View style={styles.actionsRow}>
             {item.isVerified && (
@@ -97,12 +94,11 @@ export default function HomeScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {vehicles.length > 0 && (
-        <TextInput
-          style={styles.searchInput}
+        <InputField
           placeholder="Search your garage..."
-          placeholderTextColor={theme.colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          style={{ marginBottom: theme.spacing.md }}
         />
       )}
 
@@ -144,16 +140,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.background,
   },
-  searchInput: {
-    backgroundColor: theme.colors.card,
-    color: theme.colors.text,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: theme.spacing.md,
-    ...theme.typography.body,
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -194,32 +180,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  ukPlate: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.plateYellow,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#000',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  ukPlateBlueBand: {
-    backgroundColor: '#003399',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    height: '100%',
-    justifyContent: 'center',
-  },
-  ukPlateGB: {
-    color: '#FFD700',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  regText: {
-    ...theme.typography.plate,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 2,
   },
   actionsRow: {
     flexDirection: 'row',

@@ -43,6 +43,13 @@ export const apiSlice = createApi({
         body: userData,
       }),
     }),
+    forgotPassword: builder.mutation<any, any>({
+      query: (body) => ({
+        url: '/auth/forgot-password',
+        method: 'POST',
+        body,
+      }),
+    }),
     syncVehicles: builder.mutation<any, any>({
       query: (vehicles) => ({
         url: '/vehicles/sync',
@@ -94,6 +101,12 @@ export const apiSlice = createApi({
         body,
       }),
     }),
+    getDailyReport: builder.query<any, void>({
+      query: () => '/reports/daily',
+    }),
+    getWeeklyReport: builder.query<any, void>({
+      query: () => '/reports/weekly',
+    }),
   }),
 });
 
@@ -111,5 +124,8 @@ export const {
   useLazyGetVehiclesQuery,
   useGetPendingReviewsQuery,
   useReviewV5Mutation,
-  useVerifyWorkItemMutation
+  useVerifyWorkItemMutation,
+  useForgotPasswordMutation,
+  useGetDailyReportQuery,
+  useGetWeeklyReportQuery
 } = apiSlice;

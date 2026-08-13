@@ -46,9 +46,12 @@ function errorHandler(err, req, res, next) {
 
   // PostgreSQL duplicate entry — provide a human-readable message
   if (err.code === '23505') {
-    const field = err.detail
+    let field = err.detail
       ? err.detail.match(/Key \((.+?)\)/)?.[1] || 'field'
       : 'field';
+      
+    // Clean up composite key names
+    field = field.split(', ').join(' and ').replace(/_/g, ' ');
     return res.status(409).json({
       status: 'error',
       message: `A record with this ${field} already exists.`,

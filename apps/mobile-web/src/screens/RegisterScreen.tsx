@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { useRegisterMutation } from '../store/api/apiSlice';
 import { crossPlatformAlert } from '../utils/alert';
 
@@ -22,7 +22,7 @@ export default function RegisterScreen({ navigation }: any) {
       return;
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\w\W]{8,}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       crossPlatformAlert('Invalid Password', 'Password must be at least 8 characters long, contain 1 uppercase letter and 1 number.');
       return;
@@ -150,7 +150,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.glass,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.text,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing.md,

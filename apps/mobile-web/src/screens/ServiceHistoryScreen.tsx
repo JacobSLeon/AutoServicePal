@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image } from 'react-native';
 import { useGetServiceHistoryQuery } from '../store/api/apiSlice';
-
+import Card from '../components/Card';
+import { theme } from '../utils/theme';
 export default function ServiceHistoryScreen({ route }: any) {
   const { vehicleId } = route.params;
   const { data, isLoading, error } = useGetServiceHistoryQuery(vehicleId);
@@ -34,7 +35,7 @@ export default function ServiceHistoryScreen({ route }: any) {
 
   const renderItem = ({ item }: { item: any }) => {
     return (
-      <View style={styles.card}>
+      <Card style={{ marginBottom: theme.spacing.md }}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>{item.record_name}</Text>
           <Text style={styles.date}>{new Date(item.service_date).toLocaleDateString()}</Text>
@@ -75,7 +76,7 @@ export default function ServiceHistoryScreen({ route }: any) {
             <Text>{item.admin_note}</Text>
           </View>
         )}
-      </View>
+      </Card>
     );
   };
 
@@ -94,8 +95,8 @@ export default function ServiceHistoryScreen({ route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f5f5f5',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
   },
   center: {
     flex: 1,
@@ -104,47 +105,33 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    color: 'red',
-    fontSize: 16,
+    fontSize: theme.typography.body.fontSize,
+    color: theme.colors.error,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
+    ...theme.typography.bodySecondary,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...theme.typography.h3,
   },
   date: {
-    fontSize: 14,
-    color: '#888',
+    ...theme.typography.bodySecondary,
   },
   type: {
-    fontSize: 14,
-    color: '#444',
-    marginBottom: 12,
+    ...theme.typography.bodySecondary,
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontWeight: 'bold',
-    marginTop: 8,
-    marginBottom: 4,
+    ...theme.typography.h3,
+    color: theme.colors.primaryLight,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   workItemRow: {
     flexDirection: 'row',
@@ -153,38 +140,42 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   workItemText: {
-    fontSize: 14,
+    ...theme.typography.body,
   },
   workItemDesc: {
-    fontSize: 14,
-    color: '#555',
+    ...theme.typography.bodySecondary,
   },
   verifiedBadge: {
-    fontSize: 12,
-    color: 'green',
+    ...theme.typography.caption,
+    color: theme.colors.secondary,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
   },
   proofImage: {
     width: 60,
     height: 60,
-    marginRight: 8,
-    marginBottom: 8,
-    borderRadius: 4,
-    backgroundColor: '#eee',
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   adminNote: {
-    marginTop: 12,
-    padding: 8,
-    backgroundColor: '#fff3cd',
-    borderRadius: 4,
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.plateYellow,
   },
   adminNoteTitle: {
+    ...theme.typography.body,
     fontWeight: 'bold',
-    color: '#856404',
+    color: theme.colors.plateYellow,
     marginBottom: 4,
   }
 });

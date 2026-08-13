@@ -15,6 +15,7 @@ const vehicleRoutes = require('./vehicle.routes');
 const dvlaRoutes = require('./dvla.routes');
 const adminRoutes = require('./admin.routes');
 const serviceRoutes = require('./service.routes');
+const reportRoutes = require('./report.routes');
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/vehicles', vehicleRoutes);
 router.use('/dvla', dvlaRoutes);
 router.use('/admin', adminRoutes);
 router.use('/services', serviceRoutes);
+router.use('/reports', reportRoutes);
 
 module.exports = router;

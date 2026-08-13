@@ -23,15 +23,11 @@ validateEnv();
 
 const { createApp } = require('./app');
 const db = require('./config/database');
-const { getRedisClient } = require('./config/redis');
 const { initCronJobs } = require('./jobs/cronJobs');
 
 const PORT = config.port;
 
 async function startServer() {
-  // Initialise Redis (logs connection state)
-  getRedisClient();
-
   // Auto-migrate in development and test environments
   if (config.nodeEnv !== 'production') {
     try {
@@ -76,3 +72,5 @@ async function startServer() {
 }
 
 startServer();
+// restart
+// restart2

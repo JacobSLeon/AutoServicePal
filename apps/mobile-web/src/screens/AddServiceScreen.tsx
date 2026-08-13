@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Button, ScrollView, Switch, Image, ActivityIndicator, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, Switch, Image, ActivityIndicator, Platform, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { useAddServiceRecordMutation, useUploadServiceProofsMutation } from '../store/api/apiSlice';
+import Card from '../components/Card';
+import InputField from '../components/InputField';
+import Button from '../components/Button';
+import CheckboxRow from '../components/CheckboxRow';
+import { theme } from '../utils/theme';
 import { compressImage } from '../utils/imageCompressor';
 import { crossPlatformAlert } from '../utils/alert';
 
@@ -129,14 +134,12 @@ export default function AddServiceScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={styles.card}>
-        <Text style={styles.label}>Service Date</Text>
-        <TextInput
-          style={styles.input}
+      <Card>
+        <InputField
+          label="Service Date"
           value={date}
           onChangeText={setDate}
           placeholder="YYYY-MM-DD"
-          placeholderTextColor={theme.colors.textSecondary}
         />
 
         <Text style={styles.label}>Service Type</Text>
@@ -154,40 +157,34 @@ export default function AddServiceScreen({ route, navigation }: any) {
             <Text style={[styles.typeBtnText, !isDealer && styles.typeBtnTextActive]}>🔧 Self-Performed</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Card>
 
       <Text style={styles.sectionTitle}>Work Performed</Text>
-      <View style={styles.card}>
+      <Card>
         {STANDARD_ITEMS.map((item) => {
           const isSelected = !!selectedItems[item.key];
           return (
-            <TouchableOpacity 
-              key={item.key} 
-              style={[styles.checkboxRow, isSelected && styles.checkboxRowActive]}
-              onPress={() => toggleItem(item.key)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
-                {isSelected && <Text style={styles.checkboxTick}>✓</Text>}
-              </View>
-              <Text style={[styles.checkboxLabel, isSelected && styles.checkboxLabelActive]}>{item.label}</Text>
-            </TouchableOpacity>
+            <CheckboxRow
+              key={item.key}
+              label={item.label}
+              isSelected={isSelected}
+              onToggle={() => toggleItem(item.key)}
+            />
           );
         })}
 
         {selectedItems['other'] && (
-          <TextInput
-            style={[styles.input, { marginTop: theme.spacing.md }]}
+          <InputField
+            style={{ marginTop: theme.spacing.md, marginBottom: 0 }}
             placeholder="Describe 'Other' work..."
-            placeholderTextColor={theme.colors.textSecondary}
             value={customDescription}
             onChangeText={setCustomDescription}
           />
         )}
-      </View>
+      </Card>
 
       <Text style={styles.sectionTitle}>Proof Images ({images.length}/10)</Text>
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.hintText}>Attach invoices, receipts, or photos of the work done.</Text>
         
         <View style={styles.imageGrid}>
@@ -210,22 +207,18 @@ export default function AddServiceScreen({ route, navigation }: any) {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </Card>
 
       <View style={styles.submitContainer}>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        ) : (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-            <Text style={styles.primaryButtonText}>Save Service Record</Text>
-          </TouchableOpacity>
-        )}
+        <Button
+          title="Save Service Record"
+          onPress={handleSubmit}
+          isLoading={isLoading}
+        />
       </View>
     </ScrollView>
   );
 }
-
-import { theme } from '../utils/theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -233,28 +226,9 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.background,
   },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.subtle,
-  },
   label: {
     ...theme.typography.h3,
     marginBottom: theme.spacing.sm,
-  },
-  input: {
-    backgroundColor: theme.colors.glass,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.text,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg,
-    ...theme.typography.body,
   },
   typeSelectorRow: {
     flexDirection: 'row',
@@ -283,44 +257,6 @@ const styles = StyleSheet.create({
     ...theme.typography.h2,
     color: theme.colors.primary,
     marginBottom: theme.spacing.sm,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  checkboxRowActive: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: 4,
-    marginRight: theme.spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.glass,
-  },
-  checkboxActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  checkboxTick: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  checkboxLabel: {
-    ...theme.typography.body,
-  },
-  checkboxLabelActive: {
-    fontWeight: 'bold',
-    color: theme.colors.primaryLight,
   },
   hintText: {
     ...theme.typography.caption,
@@ -384,16 +320,5 @@ const styles = StyleSheet.create({
   },
   submitContainer: {
     marginTop: theme.spacing.xl,
-  },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.pill,
-    alignItems: 'center',
-    ...theme.shadows.subtle,
-  },
-  primaryButtonText: {
-    ...theme.typography.h3,
-    color: '#000',
   }
 });

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLoginMutation, useSyncVehiclesMutation, useLazyGetVehiclesQuery } from '../store/api/apiSlice';
 import { setCredentials } from '../store/slices/authSlice';
 import { RootState } from '../store/store';
 import { setVehicles } from '../store/slices/vehicleSlice';
 import { crossPlatformAlert } from '../utils/alert';
+import { theme } from '../utils/theme';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -142,8 +143,6 @@ export default function LoginScreen({ navigation }: any) {
   );
 }
 
-import { theme } from '../utils/theme';
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -179,7 +178,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.glass,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.text,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     marginBottom: theme.spacing.md,

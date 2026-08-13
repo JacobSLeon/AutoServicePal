@@ -66,6 +66,20 @@ const schemas = {
       'any.required': 'Email is required',
     }),
   }),
+
+  reviewV5: Joi.object({
+    status: Joi.string().valid('APPROVED', 'REJECTED').required(),
+    rejection_reason: Joi.string().max(1000).when('status', {
+      is: 'REJECTED',
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(null, '')
+    })
+  }),
+
+  verifyWorkItem: Joi.object({
+    status: Joi.string().valid('APPROVED', 'REJECTED').required(),
+    admin_note: Joi.string().max(1000).optional().allow(null, '')
+  }),
 };
 
 /**

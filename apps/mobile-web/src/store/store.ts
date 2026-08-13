@@ -12,6 +12,7 @@ const persistConfig = {
   storage: AsyncStorage,
   // Persist auth token and vehicles
   whitelist: ['vehicles', 'auth'],
+  blacklist: [apiSlice.reducerPath],
 };
 
 const rootReducer = combineReducers({

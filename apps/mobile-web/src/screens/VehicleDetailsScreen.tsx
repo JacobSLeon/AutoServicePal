@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useUploadV5Mutation, useGetServiceHistoryQuery } from '../store/api/apiSlice';
 import { crossPlatformAlert } from '../utils/alert';
 import { theme } from '../utils/theme';
+import UKNumberPlate from '../components/UKNumberPlate';
 
 export default function VehicleDetailsScreen({ route, navigation }: any) {
   const { vehicleId } = route.params;
@@ -146,12 +147,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
       ListHeaderComponent={
         <View style={styles.headerSection}>
           <View style={styles.topHeader}>
-            <View style={styles.ukPlateLarge}>
-              <View style={styles.ukPlateBlueBandLarge}>
-                <Text style={styles.ukPlateGBLarge}>GB</Text>
-              </View>
-              <Text style={styles.regTextLarge}>{vehicle.registrationNumber.toUpperCase()}</Text>
-            </View>
+            <UKNumberPlate registrationNumber={vehicle.registrationNumber} size="large" />
             <TouchableOpacity onPress={handleRemove} style={styles.deleteIcon}>
               <Text style={styles.deleteIconText}>🗑️</Text>
             </TouchableOpacity>
@@ -208,34 +204,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: theme.spacing.lg,
-  },
-  ukPlateLarge: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.plateYellow,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: '#000',
-    alignItems: 'center',
-    overflow: 'hidden',
-    alignSelf: 'flex-start',
-  },
-  ukPlateBlueBandLarge: {
-    backgroundColor: '#003399',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    height: '100%',
-    justifyContent: 'center',
-  },
-  ukPlateGBLarge: {
-    color: '#FFD700',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  regTextLarge: {
-    ...theme.typography.plate,
-    fontSize: 36,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xs,
   },
   deleteIcon: {
     padding: theme.spacing.xs,
@@ -349,8 +317,8 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
     borderRadius: 4,
   },
   editBtnText: {

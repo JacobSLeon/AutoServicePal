@@ -12,14 +12,6 @@ async function reviewV5(req, res, next) {
     const v5Id = req.params.id;
     const { status, rejection_reason } = req.body;
 
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
-      return res.status(400).json({ status: 'error', message: 'Status must be APPROVED or REJECTED.' });
-    }
-
-    if (status === 'REJECTED' && !rejection_reason) {
-      return res.status(400).json({ status: 'error', message: 'Rejection reason is required when rejecting a V5.' });
-    }
-
     const v5Record = await db('v5_verifications').where({ id: v5Id }).first();
 
     if (!v5Record) {
@@ -95,14 +87,16 @@ async function getPendingReviews(req, res, next) {
         'users.email'
       );
 
-    // Fetch proofs for work items manually since we need arrays
-    const formattedWorkItems = await Promise.all(pendingWorkItems.map(async (wi) => {
-      const proofs = await db('service_proofs').where({ service_record_id: wi.service_record_id });
-      return {
-        ...wi,
-        proofs
-      };
-    }));
+    // Fetch proofs for work items manually in a single query
+    const serviceRecordIds = pendingWorkItems.map(wi => wi.service_record_id);
+    const allProofs = serviceRecordIds.length > 0 
+      ? await db('service_proofs').whereIn('service_record_id', serviceRecordIds)
+      : [];
+
+    const formattedWorkItems = pendingWorkItems.map(wi => {
+      const proofs = allProofs.filter(p => p.service_record_id === wi.service_record_id);
+      return { ...wi, proofs };
+    });
 
     return res.status(200).json({
       status: 'success',
@@ -125,10 +119,6 @@ async function verifyWorkItem(req, res, next) {
     const workItemId = req.params.id;
     const { status, admin_note } = req.body;
 
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
-      return res.status(400).json({ status: 'error', message: 'Status must be APPROVED or REJECTED.' });
-    }
-
     const workItem = await db('work_items').where({ id: workItemId }).first();
     if (!workItem) {
       return res.status(404).json({ status: 'error', message: 'Work item not found.' });
@@ -146,7 +136,7 @@ async function verifyWorkItem(req, res, next) {
         await trx('service_records')
           .where({ id: workItem.service_record_id })
           .update({
-            admin_note: db.raw(`CONCAT(COALESCE(admin_note, ''), '\n', ?)`, [admin_note])
+            admin_note: db.raw(`CASE WHEN admin_note IS NULL OR admin_note = '' THEN ? ELSE CONCAT(admin_note, CHR(10), ?) END`, [admin_note, admin_note])
           });
       }
     });

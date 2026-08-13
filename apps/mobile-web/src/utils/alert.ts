@@ -11,7 +11,7 @@ export const crossPlatformAlert = (title: string, message: string, buttons?: Ale
     if (buttons && buttons.length > 0) {
       // Find the primary action button and cancel button
       const cancelButton = buttons.find(b => b.style === 'cancel') || buttons[0];
-      const actionButton = buttons.find(b => b.style !== 'cancel') || buttons[buttons.length - 1];
+      const actionButton = buttons.find(b => b !== cancelButton) || buttons[buttons.length - 1];
 
       // If it's just an OK button with an action
       if (buttons.length === 1) {

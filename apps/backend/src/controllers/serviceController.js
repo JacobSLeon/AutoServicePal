@@ -35,6 +35,15 @@ async function addServiceRecord(req, res, next) {
       });
     }
 
+    // Verify vehicle ownership
+    const vehicle = await db('vehicles').where({ id: vehicle_id, owner_id: user_id }).first();
+    if (!vehicle) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Vehicle not found or unauthorized',
+      });
+    }
+
     // Default record_name to Service-<YYYY-MM-DD>
     const recordName = `Service-${service_date}`;
 
@@ -99,18 +108,20 @@ async function getServiceHistory(req, res, next) {
       .where({ vehicle_id: vehicleId })
       .orderBy('service_date', 'desc');
 
-    // Attach work items and proofs to each record
-    const history = await Promise.all(
-      records.map(async (record) => {
-        const workItems = await db('work_items').where({ service_record_id: record.id });
-        const proofs = await db('service_proofs').where({ service_record_id: record.id });
-        return {
-          ...record,
-          work_items: workItems,
-          proofs: proofs,
-        };
-      })
-    );
+    // Attach work items and proofs to each record efficiently
+    const recordIds = records.map(r => r.id);
+    const allWorkItems = recordIds.length > 0 ? await db('work_items').whereIn('service_record_id', recordIds) : [];
+    const allProofs = recordIds.length > 0 ? await db('service_proofs').whereIn('service_record_id', recordIds) : [];
+
+    const history = records.map((record) => {
+      const workItems = allWorkItems.filter(wi => wi.service_record_id === record.id);
+      const proofs = allProofs.filter(p => p.service_record_id === record.id);
+      return {
+        ...record,
+        work_items: workItems,
+        proofs: proofs,
+      };
+    });
 
     res.status(200).json({
       status: 'success',

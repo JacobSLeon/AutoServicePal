@@ -24,6 +24,8 @@ const { generateToken } = require('../middlewares/auth');
 const { checkLockout, recordFailedAttempt, recordSuccessfulLogin } = require('../middlewares/loginRateLimiter');
 const emailService = require('../services/emailService');
 
+const LOCKOUT_HOURS = config.security.lockoutDurationHours;
+
 // ─────────────────────────────────────────────
 // Helper: Strip sensitive fields from user object before returning to client
 // ─────────────────────────────────────────────
