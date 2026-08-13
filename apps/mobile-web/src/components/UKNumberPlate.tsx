@@ -27,8 +27,8 @@ const styles = StyleSheet.create({
   plateContainer: {
     flexDirection: 'row',
     backgroundColor: theme.colors.plateYellow,
-    borderRadius: 8,
-    borderWidth: 3,
+    borderRadius: theme.borderRadius.pill,
+    borderWidth: 2,
     borderColor: '#000',
     alignItems: 'stretch',
     overflow: 'hidden',

@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { store, persistor } from './src/store/store';
-import RootNavigator from './src/navigation/RootNavigator';
+import DrawerNavigator from './src/navigation/DrawerNavigator';
 
 export default function App() {
   return (
@@ -12,7 +12,7 @@ export default function App() {
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <NavigationContainer>
-            <RootNavigator />
+            <DrawerNavigator />
           </NavigationContainer>
         </PersistGate>
       </Provider>

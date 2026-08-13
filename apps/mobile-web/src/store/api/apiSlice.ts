@@ -57,6 +57,12 @@ export const apiSlice = createApi({
         body: { vehicles },
       }),
     }),
+    deleteAccount: builder.mutation<any, void>({
+      query: () => ({
+        url: '/users/me',
+        method: 'DELETE',
+      }),
+    }),
     getServiceHistory: builder.query<any, string>({
       query: (vehicleId) => `/services/vehicle/${vehicleId}`,
     }),
@@ -127,5 +133,6 @@ export const {
   useVerifyWorkItemMutation,
   useForgotPasswordMutation,
   useGetDailyReportQuery,
-  useGetWeeklyReportQuery
+  useGetWeeklyReportQuery,
+  useDeleteAccountMutation
 } = apiSlice;

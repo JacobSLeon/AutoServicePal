@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../config/database');
+const emailService = require('../services/emailService');
 
 /**
  * POST /api/v1/admin/v5-review/:id
@@ -39,6 +40,19 @@ async function reviewV5(req, res, next) {
           v5_status: status,
         });
     });
+
+    // Send email notification
+    try {
+      const user = await db('users').where({ id: v5Record.user_id }).first();
+      const vehicle = await db('vehicles').where({ id: v5Record.vehicle_id }).first();
+      
+      if (user && vehicle) {
+        const vehicleName = `${vehicle.make} ${vehicle.model}`;
+        await emailService.sendV5VerificationEmail(user.email, status, vehicleName, rejection_reason);
+      }
+    } catch (e) {
+      console.error(`[adminController] Failed to send V5 verification email:`, e.message);
+    }
 
     return res.status(200).json({
       status: 'success',

@@ -26,8 +26,8 @@ export default function Button({ title, variant = 'primary', isLoading, style, d
   const getVariantTextStyles = () => {
     switch (variant) {
       case 'secondary':
-      case 'primary':
         return styles.darkText;
+      case 'primary':
       case 'danger':
         return styles.lightText;
       case 'outline':
@@ -55,8 +55,9 @@ export default function Button({ title, variant = 'primary', isLoading, style, d
 
 const styles = StyleSheet.create({
   baseBtn: {
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadows.subtle,

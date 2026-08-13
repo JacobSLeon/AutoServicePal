@@ -58,7 +58,7 @@ export const darkTheme = {
 export const lightTheme = {
   colors: {
     ...darkTheme.colors,
-    background: '#F5F5F5',
+    background: '#F0F0F0',
     card: '#FFFFFF',
     text: '#121212',
     textSecondary: '#666666',

@@ -66,6 +66,11 @@ async function register(req, res, next) {
 
     const token = generateToken(newUser);
 
+    // Send welcome email
+    emailService.sendWelcomeEmail(newUser.email, newUser.full_name_v5).catch(err => {
+      console.error(`[authController.register] Welcome email failed for ${newUser.email}:`, err.message);
+    });
+
     return res.status(201).json({
       status: 'success',
       message: 'Account created successfully.',
@@ -135,7 +140,7 @@ async function login(req, res, next) {
       if (isNowLocked) {
         return res.status(423).json({
           status: 'error',
-          message: 'Account locked after too many failed login attempts. A notification has been sent to your email.',
+          message: 'Account locked after 10 failed login attempts. An alert has been sent to your registered email.',
           data: { secondsRemaining: LOCKOUT_HOURS * 3600 },
         });
       }

@@ -135,7 +135,76 @@ async function sendTemporaryPassword(email, name, tempPassword) {
   });
 }
 
+/**
+ * Sends a welcome email to newly registered users.
+ *
+ * @param {string} email - The recipient's email address
+ * @param {string} name  - The recipient's full name
+ */
+async function sendWelcomeEmail(email, name) {
+  const transporter = getTransporter();
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1565c0;">Welcome to AutoServicePal!</h2>
+      <p>Hi ${name || 'there'},</p>
+      <p>Thank you for registering an account with us.</p>
+      <p>You can now log in, add vehicles, upload V5 documents for verification, and start tracking your service history.</p>
+      <br/>
+      <p>Happy Motoring!</p>
+      <p>The AutoServicePal Team</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: config.email.from,
+    to: email,
+    subject: 'Welcome to AutoServicePal',
+    html,
+  });
+}
+
+/**
+ * Sends an email notification about V5 verification outcome.
+ *
+ * @param {string} email - The recipient's email address
+ * @param {string} status - 'APPROVED' or 'REJECTED'
+ * @param {string} vehicleName - The make/model of the vehicle
+ * @param {string} [reason] - Rejection reason if rejected
+ */
+async function sendV5VerificationEmail(email, status, vehicleName, reason) {
+  const transporter = getTransporter();
+  
+  const isApproved = status === 'APPROVED';
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: ${isApproved ? '#00E676' : '#E53935'};">V5 Logbook Verification Update</h2>
+      <p>Hi there,</p>
+      <p>The V5 logbook you uploaded for your <strong>${vehicleName || 'vehicle'}</strong> has been reviewed.</p>
+      
+      <p>Status: <strong style="color: ${isApproved ? '#00E676' : '#E53935'}">${isApproved ? 'VERIFIED' : 'REJECTED'}</strong></p>
+      
+      ${!isApproved && reason ? `<p><strong>Reason for rejection:</strong> ${reason}</p>` : ''}
+      
+      <p>${isApproved ? 'Your vehicle will now display a verified green tick!' : 'Please ensure the image is clear and the full front page is visible before trying again.'}</p>
+      
+      <br/>
+      <p>The AutoServicePal Team</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: config.email.from,
+    to: email,
+    subject: \`V5 Verification \${isApproved ? 'Successful' : 'Rejected'}\`,
+    html,
+  });
+}
+
 module.exports = {
   sendLockoutAlert,
   sendTemporaryPassword,
+  sendWelcomeEmail,
+  sendV5VerificationEmail,
 };

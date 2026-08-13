@@ -8,6 +8,8 @@ import { useUploadV5Mutation, useGetServiceHistoryQuery } from '../store/api/api
 import { crossPlatformAlert } from '../utils/alert';
 import { theme } from '../utils/theme';
 import UKNumberPlate from '../components/UKNumberPlate';
+import { Ionicons } from '@expo/vector-icons';
+import Button from '../components/Button';
 
 export default function VehicleDetailsScreen({ route, navigation }: any) {
   const { vehicleId } = route.params;
@@ -16,6 +18,8 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
   const vehicle = useSelector((state: RootState) => 
     state.vehicles.vehicles.find(v => v.id === vehicleId)
   );
+
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
   const { data: historyData, isLoading: isLoadingHistory } = useGetServiceHistoryQuery(vehicleId, {
     skip: !vehicle || vehicle.isGuest
@@ -31,22 +35,8 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     );
   }
 
-  const handleRemove = () => {
-    crossPlatformAlert('Remove Vehicle', 'Are you sure you want to remove this vehicle from your garage?', [
-      { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Remove', 
-        style: 'destructive',
-        onPress: () => {
-          dispatch(removeVehicle(vehicleId));
-          navigation.goBack();
-        }
-      }
-    ]);
-  };
-
   const handleUploadV5 = async () => {
-    if (vehicle.isGuest) {
+    if (vehicle.isGuest || !isAuthenticated) {
       crossPlatformAlert('Authentication Required', 'You must be logged in to upload V5 documents.');
       return;
     }
@@ -61,12 +51,11 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
-      quality: 0.8, // Basic compression
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets.length > 0) {
       const asset = result.assets[0];
-      
       const formData = new FormData();
       
       if (Platform.OS === 'web') {
@@ -96,98 +85,112 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     }
   };
 
-  const handleAddServiceRecord = () => {
-    if (vehicle.isGuest) {
-      crossPlatformAlert('Authentication Required', 'You must create an account to save service records.');
-      return;
-    }
-    navigation.navigate('AddService', { vehicleId: vehicle.id });
+  const renderHistoryItem = ({ item }: { item: any }) => {
+    const summary = item.work_items?.length 
+      ? item.work_items.map((wi: any) => wi.item_key.replace(/_/g, ' ')).join(', ') 
+      : 'No specific work logged';
+
+    return (
+      <View style={styles.historyCard}>
+        <View style={styles.historyCardLeft}>
+          <View style={styles.historyTypeBadge}>
+            <Ionicons 
+              name={item.service_type === 'Dealer' ? 'business' : 'build'} 
+              size={24} 
+              color={theme.colors.primary} 
+            />
+          </View>
+        </View>
+        <View style={styles.historyCardCenter}>
+          <Text style={styles.historyDate}>{new Date(item.service_date).toLocaleDateString()}</Text>
+          <Text style={styles.historyTitle}>{item.service_type} Service</Text>
+          <Text style={styles.historyWorkText} numberOfLines={2}>{summary}</Text>
+        </View>
+        <View style={styles.historyCardRight}>
+          <Button 
+            title="View / Edit" 
+            variant="danger"
+            onPress={() => navigation.navigate('ServiceHistory', { vehicleId: vehicle.id })}
+            style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+          />
+        </View>
+      </View>
+    );
   };
 
-  const renderHistoryItem = ({ item }: { item: any }) => (
-    <View style={styles.historyCard}>
-      <View style={styles.historyHeader}>
-        <View style={styles.historyTypeBadge}>
-          <Text style={styles.historyTypeIcon}>{item.service_type === 'Dealer' ? '🏢' : '🔧'}</Text>
-        </View>
-        <View style={styles.historyTitleContainer}>
-          <Text style={styles.historyDate}>{new Date(item.service_date).toLocaleDateString()}</Text>
-          <Text style={styles.historyTitle}>{item.record_name}</Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.editBtn} 
-          onPress={() => crossPlatformAlert('Not Implemented', 'Edit service coming soon')}
-        >
-          <Text style={styles.editBtnText}>View / Edit</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.historyWorkRow}>
-        <Text style={styles.historyWorkText}>
-          {item.work_items?.length ? item.work_items.map((wi: any) => wi.item_key.replace(/_/g, ' ')).join(', ') : 'No specific work logged'}
-        </Text>
-      </View>
-      
-      {item.proofs && item.proofs.length > 0 && (
-        <View style={styles.historyImageGrid}>
-          {item.proofs.map((proof: any) => (
-            <Image key={proof.id} source={{ uri: proof.image_url }} style={styles.historyImage} />
-          ))}
-        </View>
-      )}
-    </View>
-  );
+  const canAddService = isAuthenticated && vehicle.isVerified;
 
   return (
-    <FlatList
-      style={styles.container}
-      data={historyData?.data?.history || []}
-      keyExtractor={(item) => item.id}
-      renderItem={renderHistoryItem}
-      ListHeaderComponent={
-        <View style={styles.headerSection}>
-          <View style={styles.topHeader}>
-            <UKNumberPlate registrationNumber={vehicle.registrationNumber} size="large" />
-            <TouchableOpacity onPress={handleRemove} style={styles.deleteIcon}>
-              <Text style={styles.deleteIconText}>🗑️</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.container}>
+      {/* Red Header Card */}
+      <View style={styles.headerCard}>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+            <Ionicons name="home" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => (navigation as any).openDrawer?.()}>
+            <Ionicons name="menu" size={32} color="#FFF" />
+          </TouchableOpacity>
+        </View>
 
-          <View style={styles.pillsRow}>
-            <View style={styles.pillBox}>
-              <Text style={styles.pillLabel}>MOT</Text>
-              <Text style={styles.pillValue}>{vehicle.motDueDate || 'Unknown'}</Text>
-            </View>
-            <View style={styles.pillBox}>
-              <Text style={styles.pillLabel}>TAX</Text>
-              <Text style={styles.pillValue}>{vehicle.taxDueDate || 'Unknown'}</Text>
-            </View>
-          </View>
+        <View style={styles.headerCenter}>
+          <UKNumberPlate registrationNumber={vehicle.registrationNumber} size="large" />
+        </View>
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.addServiceBtn} onPress={handleAddServiceRecord}>
-              <Text style={styles.addServiceBtnText}>Add Service</Text>
-            </TouchableOpacity>
-            {!vehicle.isVerified && (
-              <TouchableOpacity 
-                style={[styles.uploadV5Btn, isUploading && styles.disabledBtn]} 
-                onPress={handleUploadV5}
-                disabled={isUploading}
-              >
-                <Text style={styles.uploadV5BtnText}>{isUploading ? "Uploading..." : "Upload V5"}</Text>
-              </TouchableOpacity>
+        <View style={styles.headerPillsRow}>
+          <View style={styles.whitePill}>
+            <Text style={styles.pillLabel}>MOT</Text>
+            <Text style={styles.pillValue}>{vehicle.motDueDate || 'Unknown'}</Text>
+          </View>
+          <View style={styles.whitePill}>
+            <Text style={styles.pillLabel}>TAX</Text>
+            <Text style={styles.pillValue}>{vehicle.taxDueDate || 'Unknown'}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.content}>
+        {/* Permission / Action Banner */}
+        {!canAddService ? (
+          <View style={styles.warningBanner}>
+            {!isAuthenticated ? (
+              <Text style={styles.warningBannerText}>Log in to access service record</Text>
+            ) : (
+              <Text style={styles.warningBannerText}>V5 Pending Verification</Text>
+            )}
+            {!isAuthenticated ? (
+              <Button title="Login" variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={() => navigation.navigate('Login')} />
+            ) : !vehicle.isVerified && (
+              <Button title={isUploading ? "Uploading..." : "Upload V5"} variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={handleUploadV5} disabled={isUploading} />
             )}
           </View>
+        ) : (
+          <View style={{ padding: theme.spacing.md }}>
+            <Button 
+              title="Add Service" 
+              variant="primary" 
+              onPress={() => navigation.navigate('AddService', { vehicleId: vehicle.id })}
+            />
+          </View>
+        )}
 
-          <Text style={styles.sectionHeader}>SERVICE HISTORY</Text>
-          {isLoadingHistory && <ActivityIndicator size="small" color={theme.colors.primary} style={{marginTop: 10}}/>}
-          {!isLoadingHistory && (!historyData?.data?.history || historyData.data.history.length === 0) && (
-            <Text style={styles.emptyHistory}>No service history found.</Text>
-          )}
-        </View>
-      }
-      contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
-    />
+        <Text style={styles.sectionHeader}>SERVICE HISTORY</Text>
+        
+        {isLoadingHistory ? (
+          <ActivityIndicator size="large" color={theme.colors.primary} style={{marginTop: 20}}/>
+        ) : (
+          <FlatList
+            data={historyData?.data?.history || []}
+            keyExtractor={(item) => item.id}
+            renderItem={renderHistoryItem}
+            contentContainerStyle={{ paddingBottom: theme.spacing.xl, paddingHorizontal: theme.spacing.md }}
+            ListEmptyComponent={
+              <Text style={styles.emptyHistory}>No service history recorded for this vehicle.</Text>
+            }
+          />
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -196,80 +199,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  headerSection: {
-    padding: theme.spacing.md,
+  headerCard: {
+    backgroundColor: theme.colors.primary,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Safe area approx
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    ...theme.shadows.glass,
+    zIndex: 10,
   },
-  topHeader: {
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.lg,
-  },
-  deleteIcon: {
-    padding: theme.spacing.xs,
-  },
-  deleteIconText: {
-    fontSize: 24,
-  },
-  pillsRow: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.lg,
-  },
-  pillBox: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginRight: theme.spacing.sm,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.md,
+  },
+  headerCenter: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  headerPillsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  whitePill: {
+    backgroundColor: '#FFF',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.pill,
+    alignItems: 'center',
+    minWidth: 140,
     ...theme.shadows.subtle,
   },
   pillLabel: {
-    ...theme.typography.h3,
+    ...theme.typography.caption,
     color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
+    fontWeight: 'bold',
   },
   pillValue: {
     ...theme.typography.body,
+    color: '#111',
     fontWeight: 'bold',
   },
-  actionRow: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.xl,
-  },
-  addServiceBtn: {
+  content: {
     flex: 1,
-    backgroundColor: theme.colors.primary,
+  },
+  warningBanner: {
+    backgroundColor: theme.colors.error,
     padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.pill,
+    margin: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
-    marginRight: theme.spacing.sm,
+    ...theme.shadows.subtle,
   },
-  addServiceBtnText: {
-    ...theme.typography.body,
-    fontWeight: 'bold',
-  },
-  uploadV5Btn: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.pill,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  uploadV5BtnText: {
-    ...theme.typography.body,
-  },
-  disabledBtn: {
-    opacity: 0.5,
+  warningBannerText: {
+    ...theme.typography.h3,
+    color: '#FFF',
+    textAlign: 'center',
   },
   sectionHeader: {
-    ...theme.typography.h2,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.md,
+    ...theme.typography.h3,
+    color: theme.colors.textSecondary,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
   },
   emptyHistory: {
     ...theme.typography.bodySecondary,
@@ -279,68 +273,43 @@ const styles = StyleSheet.create({
   },
   historyCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    marginHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl,
     marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.primary,
-    ...theme.shadows.subtle,
-  },
-  historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    ...theme.shadows.subtle,
   },
-  historyTypeBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.glass,
-    justifyContent: 'center',
-    alignItems: 'center',
+  historyCardLeft: {
     marginRight: theme.spacing.md,
   },
-  historyTypeIcon: {
-    fontSize: 20,
+  historyTypeBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  historyTitleContainer: {
+  historyCardCenter: {
     flex: 1,
   },
   historyDate: {
     ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     marginBottom: 2,
   },
   historyTitle: {
     ...theme.typography.body,
     fontWeight: 'bold',
-  },
-  editBtn: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 4,
-  },
-  editBtnText: {
-    ...theme.typography.caption,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  historyWorkRow: {
-    marginTop: theme.spacing.xs,
+    color: theme.colors.text,
+    marginBottom: 2,
   },
   historyWorkText: {
-    ...theme.typography.bodySecondary,
-    fontStyle: 'italic',
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
   },
-  historyImageGrid: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.sm,
-  },
-  historyImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    marginRight: theme.spacing.sm,
+  historyCardRight: {
+    marginLeft: theme.spacing.sm,
   }
 });
