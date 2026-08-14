@@ -1,8 +1,11 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 
+import Constants from 'expo-constants';
+import type { Vehicle } from '../../types/vehicle';
+
 // For local testing on Android emulator use 10.0.2.2, for iOS simulator use localhost
-const BASE_URL = 'http://localhost:3001/api/v1';
+const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? 'http://localhost:3001/api/v1';
 
 export const apiSlice = createApi({
   reducerPath: 'api',
@@ -51,7 +54,7 @@ export const apiSlice = createApi({
         body,
       }),
     }),
-    syncVehicles: builder.mutation<any, any>({
+    syncVehicles: builder.mutation<{ status: string; data: { vehicles: any[] } }, any>({
       query: (vehicles) => ({
         url: '/vehicles/sync',
         method: 'POST',
@@ -91,14 +94,14 @@ export const apiSlice = createApi({
         body: formData,
       }),
     }),
-    addVehicle: builder.mutation<any, any>({
+    addVehicle: builder.mutation<{ status: string; data: { vehicle: any } }, any>({
       query: (vehicleData) => ({
         url: '/vehicles',
         method: 'POST',
         body: vehicleData,
       }),
     }),
-    getVehicles: builder.query<any, void>({
+    getVehicles: builder.query<{ status: string; data: { vehicles: any[] } }, void>({
       query: () => '/vehicles',
       providesTags: ['Vehicle'],
     }),

@@ -22,7 +22,7 @@
 const db = require('../config/database');
 const emailService = require('../services/emailService');
 const { config } = require('../config/env');
-const { encrypt, decrypt } = require('../utils/crypto');
+const { blindIndex, decrypt } = require('../utils/crypto');
 
 const MAX_ATTEMPTS = config.security.maxLoginAttempts;      // 10
 const LOCKOUT_HOURS = config.security.lockoutDurationHours; // 24
@@ -34,9 +34,9 @@ const LOCKOUT_HOURS = config.security.lockoutDurationHours; // 24
  * @returns {Promise<{ isLocked: boolean, secondsRemaining: number|null, user: object|null }>}
  */
 async function checkLockout(email) {
-  const encryptedEmail = encrypt(email.toLowerCase());
+  const index = blindIndex(email.toLowerCase());
   const user = await db('users')
-    .where({ email: encryptedEmail })
+    .where({ email_index: index })
     .select('id', 'full_name_v5', 'email', 'password_hash', 'failed_login_attempts', 'locked_until', 'role')
     .first();
 

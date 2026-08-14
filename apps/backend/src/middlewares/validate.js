@@ -80,6 +80,47 @@ const schemas = {
     status: Joi.string().valid('APPROVED', 'REJECTED').required(),
     admin_note: Joi.string().max(1000).optional().allow(null, '')
   }),
+
+  serviceRecord: Joi.object({
+    vehicle_id: Joi.string().required(),
+    service_type: Joi.string().required(),
+    service_date: Joi.date().iso().required().messages({
+      'date.format': 'Service date must be a valid ISO date string (YYYY-MM-DD)'
+    }),
+    record_name: Joi.string().optional().allow(null, ''),
+    cost: Joi.number().optional().allow(null),
+    provider_details: Joi.string().optional().allow(null, ''),
+    work_items: Joi.array().items(
+      Joi.object({
+        item_key: Joi.string().required(),
+        custom_description: Joi.string().when('item_key', {
+          is: 'Other',
+          then: Joi.required(),
+          otherwise: Joi.optional().allow(null, '')
+        })
+      })
+    ).required()
+  }),
+
+  updateServiceRecord: Joi.object({
+    service_type: Joi.string().optional(),
+    service_date: Joi.date().iso().optional().messages({
+      'date.format': 'Service date must be a valid ISO date string (YYYY-MM-DD)'
+    }),
+    record_name: Joi.string().optional().allow(null, ''),
+    cost: Joi.number().optional().allow(null),
+    provider_details: Joi.string().optional().allow(null, ''),
+    work_items: Joi.array().items(
+      Joi.object({
+        item_key: Joi.string().required(),
+        custom_description: Joi.string().when('item_key', {
+          is: 'Other',
+          then: Joi.required(),
+          otherwise: Joi.optional().allow(null, '')
+        })
+      })
+    ).optional()
+  }),
 };
 
 /**

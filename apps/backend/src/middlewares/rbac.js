@@ -15,6 +15,9 @@
  *   router.get('/vehicles', authenticateToken, requireRole('USER', 'ADMIN'), vehicleController.list);
  */
 
+const db = require('../config/database');
+const { decrypt } = require('../utils/crypto');
+
 /**
  * Returns middleware that allows access only if req.user.role matches
  * one of the specified allowed roles.
@@ -23,7 +26,7 @@
  * @returns {Function} Express middleware
  */
 function requireRole(...roles) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     // This middleware must run after authenticateToken
     if (!req.user) {
       return res.status(401).json({
@@ -41,12 +44,23 @@ function requireRole(...roles) {
 
     // Strict admin credential check based on environment variables
     if (req.user.role === 'ADMIN') {
-      const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-      if (!adminEmails.includes(req.user.email.toLowerCase())) {
-        return res.status(403).json({
-          status: 'error',
-          message: 'Access denied. Verified admin credentials not found in environment configuration.',
-        });
+      try {
+        const user = await db('users').where({ id: req.user.id }).select('email').first();
+        if (!user) {
+          return res.status(401).json({ status: 'error', message: 'User not found.' });
+        }
+        
+        const plainEmail = decrypt(user.email).toLowerCase();
+        const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+        
+        if (!adminEmails.includes(plainEmail)) {
+          return res.status(403).json({
+            status: 'error',
+            message: 'Access denied. Verified admin credentials not found in environment configuration.',
+          });
+        }
+      } catch (err) {
+        return next(err);
       }
     }
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import { 
   useGetPendingReviewsQuery, 
   useReviewV5Mutation, 
@@ -70,7 +71,7 @@ export default function AdminScreen() {
       <Text style={styles.subText}>{item.make} {item.model}</Text>
       <Text style={styles.subText}>User: {item.email}</Text>
       
-      <Image source={{ uri: item.v5_image_url }} style={styles.proofImageLarge} resizeMode="contain" />
+      <Image source={{ uri: item.v5_image_url }} style={styles.proofImageLarge} contentFit="contain" />
       
       <InputField
         placeholder="Rejection reason (if rejecting)..."

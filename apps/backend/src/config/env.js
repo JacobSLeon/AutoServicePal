@@ -17,6 +17,8 @@ const REQUIRED_VARS = [
   'EMAIL_USER',
   'EMAIL_PASS',
   'EMAIL_FROM',
+  'ENCRYPTION_KEY',
+  'BLIND_INDEX_KEY',
 ];
 
 /**
@@ -36,6 +38,16 @@ function validateEnv() {
   // Validate JWT_SECRET length — must be at least 32 characters
   if (process.env.JWT_SECRET.length < 32) {
     throw new Error('[env] JWT_SECRET must be at least 32 characters long for security.');
+  }
+
+  // Validate ENCRYPTION_KEY length — must be exactly 32 characters
+  if (process.env.ENCRYPTION_KEY.length !== 32) {
+    throw new Error('[env] ENCRYPTION_KEY must be exactly 32 characters.');
+  }
+
+  // Validate BLIND_INDEX_KEY length — must be exactly 32 characters
+  if (process.env.BLIND_INDEX_KEY.length !== 32) {
+    throw new Error('[env] BLIND_INDEX_KEY must be exactly 32 characters.');
   }
 }
 

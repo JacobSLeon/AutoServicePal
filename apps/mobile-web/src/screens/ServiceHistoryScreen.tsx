@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useGetServiceHistoryQuery } from '../store/api/apiSlice';
 import Card from '../components/Card';
 import Button from '../components/Button';

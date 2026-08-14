@@ -3,6 +3,7 @@
 const db = require('../config/database');
 const emailService = require('../services/emailService');
 const admin = require('../config/firebase');
+const { decrypt } = require('../utils/crypto');
 
 /**
  * POST /api/v1/admin/v5-review/:id
@@ -55,8 +56,9 @@ async function reviewV5(req, res, next) {
       const vehicle = await db('vehicles').where({ id: v5Record.vehicle_id }).first();
       
       if (user && vehicle) {
+        const plainEmail = decrypt(user.email);
         const vehicleName = `${vehicle.make} ${vehicle.model}`;
-        await emailService.sendV5VerificationEmail(user.email, status, vehicleName, rejection_reason);
+        await emailService.sendV5VerificationEmail(plainEmail, status, vehicleName, rejection_reason);
       }
     } catch (e) {
       console.error(`[adminController] Failed to send V5 verification email:`, e.message);
@@ -176,8 +178,7 @@ async function verifyWorkItem(req, res, next) {
       // Assuming a simplistic model where we send a message to a topic or if we have user tokens saved.
       // Since user tokens aren't explicitly modeled in this schema, we simulate the FCM call.
       if (admin.apps.length > 0 && record) {
-        // Pseudo-code for FCM: admin.messaging().sendToDevice(userTokens, payload);
-        console.log(`[adminController] Mock FCM sent to user ${record.user_id} for work item ${workItemId}`);
+        // FCM implementation pending
       }
     } catch (fcmErr) {
       console.error('[adminController] FCM Error:', fcmErr.message);

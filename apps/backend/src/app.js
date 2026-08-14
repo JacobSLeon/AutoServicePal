@@ -8,6 +8,7 @@
  * Exported as a factory function so it can be cleanly imported by tests.
  */
 
+const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -18,20 +19,19 @@ const logger = require('./config/logger');
 
 const apiRouter = require('./routes/index');
 const { errorHandler } = require('./middlewares/errorHandler');
+const { config } = require('./config/env');
+
+// ── Sentry Init ─────────────────────────────────────────────────────────
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || '',
+  environment: process.env.NODE_ENV || 'development',
+});
 
 function createApp() {
   const app = express();
 
-  // ── Sentry Init ─────────────────────────────────────────────────────────
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN || '',
-    environment: process.env.NODE_ENV || 'development',
-  });
-
   // ── Security headers ─────────────────────────────────────────────────────
-  app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
-  }));
+  app.use(helmet());
 
   // ── Rate Limiting ────────────────────────────────────────────────────────
   const limiter = rateLimit({
@@ -45,14 +45,26 @@ function createApp() {
   app.use(limiter);
 
   // ── CORS ─────────────────────────────────────────────────────────────────
-  // In production, restrict to the app's actual domain(s).
-  app.use(
-    cors({
-      origin: process.env.CORS_ORIGIN || '*',
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    })
-  );
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : [];
+
+  if (config.nodeEnv === 'production' && allowedOrigins.length === 0) {
+    throw new Error('[CORS] CORS_ORIGIN must be set in production.');
+  }
+
+  app.use(cors({
+    origin: (origin, cb) => {
+      // In development allow all if empty. In prod, allow if origin matches or is allowed (e.g. mobile apps without origin)
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }));
 
   // ── Request Parsing ───────────────────────────────────────────────────────
   app.use(express.json({ limit: '10mb' }));
@@ -60,13 +72,15 @@ function createApp() {
 
   // ── Request Logging ───────────────────────────────────────────────────────
   // Skip logging in test environment to keep test output clean
-  // ── Static Files ──────────────────────────────────────────────────────────
-  const path = require('path');
-  app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
-
   if (process.env.NODE_ENV !== 'test') {
     app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
   }
+
+  // ── Static Files ──────────────────────────────────────────────────────────
+  app.use('/uploads',
+    (_req, res, next) => { res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); next(); },
+    express.static(path.join(__dirname, '../public/uploads'))
+  );
 
   // ── Health Check ─────────────────────────────────────────────────────────
   app.get('/health', (_req, res) => {

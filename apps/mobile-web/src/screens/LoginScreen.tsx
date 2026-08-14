@@ -8,6 +8,8 @@ import { setVehicles } from '../store/slices/vehicleSlice';
 import { crossPlatformAlert } from '../utils/alert';
 import { theme } from '../utils/theme';
 
+import { mapApiVehicle } from '../utils/vehicleMapper';
+
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,20 +42,7 @@ export default function LoginScreen({ navigation }: any) {
         try {
           const syncResponse = await syncVehicles(guestVehicles).unwrap();
           if (syncResponse.data && Array.isArray(syncResponse.data.vehicles)) {
-             const mergedVehicles = syncResponse.data.vehicles.map((v: any) => ({
-                id: v.id.toString(),
-                registrationNumber: v.registrationNumber,
-                make: v.make,
-                model: v.model,
-                colour: v.colour,
-                motStatus: v.motStatus || 'Unknown',
-                motDueDate: v.motExpiryDate,
-                taxStatus: v.taxStatus || 'Unknown',
-                taxDueDate: v.taxDueDate,
-                isVerified: v.isVerified || false,
-                v5_status: v.v5_status || 'UNVERIFIED',
-                isGuest: false,
-             }));
+             const mergedVehicles = syncResponse.data.vehicles.map((v: any) => mapApiVehicle(v, false));
              dispatch(setVehicles(mergedVehicles));
           }
           crossPlatformAlert('Sync Complete', 'Your guest vehicles have been saved to your account!');
@@ -66,18 +55,7 @@ export default function LoginScreen({ navigation }: any) {
         try {
           const cloudVehicles = await getVehicles().unwrap();
           if (cloudVehicles.data && Array.isArray(cloudVehicles.data.vehicles)) {
-             const mappedVehicles = cloudVehicles.data.vehicles.map((v: any) => ({
-                id: v.id.toString(),
-                registrationNumber: v.registration_number,
-                make: v.make,
-                model: v.model,
-                colour: v.colour,
-                motStatus: 'Unknown',
-                taxStatus: 'Unknown',
-                isVerified: v.is_v5_verified || false,
-                v5_status: v.v5_status || 'UNVERIFIED',
-                isGuest: false,
-             }));
+             const mappedVehicles = cloudVehicles.data.vehicles.map((v: any) => mapApiVehicle(v, false));
              dispatch(setVehicles(mappedVehicles));
           }
         } catch (getErr) {

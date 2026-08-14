@@ -40,7 +40,7 @@ function errorHandler(err, req, res, next) {
 
   // Always log the full error server-side
   console.error(`[errorHandler] ${req.method} ${req.path} — ${statusCode}:`, err.message);
-  if (isDev) {
+  if (isDev || process.env.NODE_ENV === 'test') {
     console.error(err.stack);
   }
 

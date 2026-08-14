@@ -4,6 +4,7 @@ const express = require('express');
 const serviceController = require('../controllers/serviceController');
 const reportController = require('../controllers/reportController');
 const { authenticateToken } = require('../middlewares/auth');
+const { validate, schemas } = require('../middlewares/validate');
 const upload = require('../middlewares/upload');
 
 const router = express.Router();
@@ -13,11 +14,11 @@ router.use(authenticateToken);
 
 // POST /api/v1/services
 // Add a new service record with work items
-router.post('/', serviceController.addServiceRecord);
+router.post('/', validate(schemas.serviceRecord), serviceController.addServiceRecord);
 
 // PUT /api/v1/services/:id
 // Update a service record
-router.put('/:id', serviceController.updateServiceRecord);
+router.put('/:id', validate(schemas.updateServiceRecord), serviceController.updateServiceRecord);
 
 // GET /api/v1/services/vehicle/:vehicleId
 // Get the entire service history for a specific vehicle

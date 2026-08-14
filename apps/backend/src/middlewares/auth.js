@@ -16,13 +16,13 @@ const jwt = require('jsonwebtoken');
 const { config } = require('../config/env');
 const admin = require('../config/firebase');
 const db = require('../config/database');
-const { encrypt } = require('../utils/crypto');
+const { blindIndex } = require('../utils/crypto');
 
 /**
  * Verifies the JWT from the Authorization header and populates req.user.
  * Chain with rbac.js to enforce role-based access on protected routes.
  */
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.startsWith('Bearer ')
     ? authHeader.slice(7)
@@ -51,37 +51,29 @@ function authenticateToken(req, res, next) {
         message: 'Token has expired. Please log in again.',
       });
     }
+    // Fall through to Firebase
+  }
+  
+  try {
+    const decodedFirebaseToken = await admin.auth().verifyIdToken(token);
+    const email = decodedFirebaseToken.email;
+    if (!email) throw new Error('Firebase token missing email');
     
-    // Fallback: Try verifying as a Firebase ID token
-    admin.auth().verifyIdToken(token)
-      .then(async (decodedFirebaseToken) => {
-        try {
-          const email = decodedFirebaseToken.email;
-          if (!email) throw new Error('Firebase token missing email');
-          
-          const encryptedEmail = encrypt(email.toLowerCase());
-          const user = await db('users').where({ email: encryptedEmail }).first();
-          if (!user) throw new Error('User not found in DB');
-          
-          req.user = {
-            id: user.id,
-            email: email.toLowerCase(),
-            role: user.role,
-          };
-          return next();
-        } catch (dbErr) {
-          return res.status(401).json({
-            status: 'error',
-            message: 'Firebase authentication failed or user not registered.',
-          });
-        }
-      })
-      .catch((firebaseErr) => {
-        return res.status(401).json({
-          status: 'error',
-          message: 'Invalid authentication token.',
-        });
-      });
+    const index = blindIndex(email.toLowerCase());
+    const user = await db('users').where({ email_index: index }).first();
+    if (!user) throw new Error('User not found in DB');
+    
+    req.user = {
+      id: user.id,
+      email: email.toLowerCase(),
+      role: user.role,
+    };
+    return next();
+  } catch (err) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'Invalid authentication token.',
+    });
   }
 }
 

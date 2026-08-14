@@ -23,7 +23,7 @@ const { config } = require('../config/env');
 const { generateToken } = require('../middlewares/auth');
 const { checkLockout, recordFailedAttempt, recordSuccessfulLogin } = require('../middlewares/loginRateLimiter');
 const emailService = require('../services/emailService');
-const { encrypt, decrypt } = require('../utils/crypto');
+const { encrypt, decrypt, blindIndex } = require('../utils/crypto');
 
 const LOCKOUT_HOURS = config.security.lockoutDurationHours;
 
@@ -61,6 +61,7 @@ async function register(req, res, next) {
       .insert({
         full_name_v5,
         email: encrypt(email.toLowerCase()),
+        email_index: blindIndex(email.toLowerCase()),
         password_hash,
         role: 'USER',
       })
@@ -96,9 +97,9 @@ async function register(req, res, next) {
  *
  * Lockout logic (AGENTS.md):
  *   1. Look up user + check locked_until BEFORE comparing passwords
- *   2. If account is locked → 423 Locked with seconds remaining
- *   3. If password incorrect → increment counter; lock on 10th failure; 401
- *   4. If password correct → reset counter; issue JWT; 200
+ *     - If account is locked → 423 Locked with seconds remaining
+ *   2. If password incorrect → increment counter; lock on 10th failure; 401
+ *   3. If password correct → reset counter; issue JWT; 200
  *
  * Deliberately returns generic messages to prevent email enumeration.
  *
@@ -124,7 +125,7 @@ async function login(req, res, next) {
       });
     }
 
-    // Step 3: Account is currently locked
+    // Step 2: Account is currently locked
     if (isLocked) {
       const hoursRemaining = Math.ceil(secondsRemaining / 3600);
       return res.status(423).json({
@@ -134,7 +135,7 @@ async function login(req, res, next) {
       });
     }
 
-    // Step 4: Verify password
+    // Step 3: Verify password
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
@@ -151,12 +152,11 @@ async function login(req, res, next) {
 
       return res.status(401).json({
         status: 'error',
-        message: `Invalid email or password. ${attemptsRemaining} attempt(s) remaining before lockout.`,
-        data: { attemptsRemaining },
+        message: 'Invalid email or password.',
       });
     }
 
-    // Step 5: Successful login — reset counter, update last_login_at, issue token
+    // Step 4: Successful login — reset counter, update last_login_at, issue token
     await recordSuccessfulLogin(user.id);
 
     const token = generateToken(user);
@@ -195,9 +195,9 @@ async function forgotPassword(req, res, next) {
   try {
     const { email } = req.body;
 
-    const encryptedEmail = encrypt(email.toLowerCase());
+    const index = blindIndex(email.toLowerCase());
     const user = await db('users')
-      .where({ email: encryptedEmail })
+      .where({ email_index: index })
       .select('id', 'full_name_v5', 'email')
       .first();
 

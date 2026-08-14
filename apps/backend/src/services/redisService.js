@@ -65,10 +65,13 @@ async function delCache(key) {
  */
 async function clearCachePattern(pattern) {
   try {
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
+    const stream = redis.scanStream({ match: pattern, count: 100 });
+    const pipeline = redis.pipeline();
+    stream.on('data', (keys) => keys.forEach(k => pipeline.del(k)));
+    await new Promise((resolve, reject) => {
+      stream.on('end', () => pipeline.exec().then(resolve).catch(reject));
+      stream.on('error', reject);
+    });
   } catch (err) {
     logger.error(`Error clearing cache pattern ${pattern}:`, err);
   }

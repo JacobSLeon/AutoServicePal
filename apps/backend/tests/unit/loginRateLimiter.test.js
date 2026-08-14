@@ -137,12 +137,13 @@ describe('checkLockout', () => {
     expect(result.secondsRemaining).toBeLessThanOrEqual(3600);
   });
 
-  test('queries database with lowercased email', async () => {
+  test('queries database with lowercased email index', async () => {
     mockDbFirst.mockResolvedValueOnce(null);
 
     await checkLockout('TEST@EXAMPLE.COM');
 
-    expect(mockChain.where).toHaveBeenCalledWith({ email: 'test@example.com' });
+    const { blindIndex } = require('../../src/utils/crypto');
+    expect(mockChain.where).toHaveBeenCalledWith({ email_index: blindIndex('test@example.com') });
   });
 });
 

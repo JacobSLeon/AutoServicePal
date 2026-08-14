@@ -4,15 +4,28 @@ const db = require('../config/database');
 const sharp = require('sharp');
 const fs = require('fs');
 
+const VALID_WORK_ITEMS = new Set([
+  'Oil & Filter', 'Air Filter', 'Cabin Filter', 'Fuel Filter',
+  'Spark Plugs', 'Glow Plugs', 'Brake Pads (Front)', 'Brake Pads (Rear)',
+  'Brake Discs (Front)', 'Brake Discs (Rear)', 'Brake Fluid', 'Coolant',
+  'Timing Belt', 'Water Pump', 'Drive Belt', 'Battery',
+  'Tyres (Front)', 'Tyres (Rear)', 'Wheel Alignment', 'Suspension (Front)',
+  'Suspension (Rear)', 'Exhaust', 'Clutch', 'Gearbox Oil',
+  'Differential Oil', 'Air Conditioning', 'Wiper Blades', 'Bulbs',
+  'Diagnostics', 'MOT', 'Other',
+]);
+
 /**
  * Helper to fetch a single service record by ID along with its work items and proofs
  */
 async function fetchFullServiceRecord(serviceRecordId) {
-  const record = await db('service_records').where({ id: serviceRecordId }).first();
+  const [record, workItems, proofs] = await Promise.all([
+    db('service_records').where({ id: serviceRecordId }).first(),
+    db('work_items').where({ service_record_id: serviceRecordId }),
+    db('service_proofs').where({ service_record_id: serviceRecordId }),
+  ]);
+  
   if (!record) return null;
-
-  const workItems = await db('work_items').where({ service_record_id: serviceRecordId });
-  const proofs = await db('service_proofs').where({ service_record_id: serviceRecordId });
 
   return {
     ...record,
@@ -34,6 +47,14 @@ async function addServiceRecord(req, res, next) {
       return res.status(400).json({
         status: 'error',
         message: 'Missing required fields or work_items is not an array',
+      });
+    }
+
+    const invalidItems = work_items.filter(i => !VALID_WORK_ITEMS.has(i.item_key));
+    if (invalidItems.length > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Invalid work item(s): ${invalidItems.map(i => i.item_key).join(', ')}`,
       });
     }
 
@@ -122,17 +143,27 @@ async function updateServiceRecord(req, res, next) {
 
     const recordName = record_name !== undefined ? record_name : (service_date ? `Service-${service_date}` : record.record_name);
 
-    await db('service_records').where({ id }).update({
-      service_type: service_type || record.service_type,
-      service_date: service_date || record.service_date,
-      record_name: recordName,
-      cost: cost !== undefined ? cost : record.cost,
-      provider_details: provider_details !== undefined ? provider_details : record.provider_details,
-      verification_status: 'PENDING'
-    });
-
     if (req.body.work_items && Array.isArray(req.body.work_items)) {
-      await db.transaction(async (trx) => {
+      const invalidItems = req.body.work_items.filter(i => !VALID_WORK_ITEMS.has(i.item_key));
+      if (invalidItems.length > 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Invalid work item(s): ${invalidItems.map(i => i.item_key).join(', ')}`,
+        });
+      }
+    }
+
+    await db.transaction(async (trx) => {
+      await trx('service_records').where({ id }).update({
+        service_type: service_type || record.service_type,
+        service_date: service_date || record.service_date,
+        record_name: recordName,
+        cost: cost !== undefined ? cost : record.cost,
+        provider_details: provider_details !== undefined ? provider_details : record.provider_details,
+        verification_status: 'PENDING'
+      });
+
+      if (req.body.work_items && Array.isArray(req.body.work_items)) {
         // Delete old work items
         await trx('work_items').where({ service_record_id: id }).delete();
         // Insert new ones
@@ -144,8 +175,8 @@ async function updateServiceRecord(req, res, next) {
           }));
           await trx('work_items').insert(itemsToInsert);
         }
-      });
-    }
+      }
+    });
 
     const fullRecord = await fetchFullServiceRecord(id);
     res.status(200).json({ status: 'success', data: fullRecord });
@@ -231,6 +262,25 @@ async function uploadServiceProofs(req, res, next) {
       });
     }
 
+    // Enforce max 10 proofs total (count existing) BEFORE processing files
+    const existingCountResult = await db('service_proofs')
+      .where({ service_record_id: id })
+      .count('* as count')
+      .first();
+      
+    const currentCount = parseInt(existingCountResult.count, 10);
+    
+    if (currentCount + req.files.length > 10) {
+      // Clean up uploaded files since we are rejecting them
+      for (const file of req.files) {
+        fs.unlink(file.path, () => {});
+      }
+      return res.status(400).json({
+        status: 'error',
+        message: `Maximum 10 images allowed. You have ${currentCount} already.`,
+      });
+    }
+
     // Compress and resize images using sharp
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const proofsToInsert = [];
@@ -251,21 +301,6 @@ async function uploadServiceProofs(req, res, next) {
       });
     }
 
-    // Enforce max 10 proofs total (count existing)
-    const existingCountResult = await db('service_proofs')
-      .where({ service_record_id: id })
-      .count('* as count')
-      .first();
-      
-    const currentCount = parseInt(existingCountResult.count, 10);
-    
-    if (currentCount + proofsToInsert.length > 10) {
-      return res.status(400).json({
-        status: 'error',
-        message: `Maximum 10 images allowed. You have ${currentCount} already.`,
-      });
-    }
-
     await db('service_proofs').insert(proofsToInsert);
 
     const fullRecord = await fetchFullServiceRecord(id);
@@ -276,6 +311,13 @@ async function uploadServiceProofs(req, res, next) {
       data: fullRecord,
     });
   } catch (err) {
+    // Always clean up temp files on error
+    if (req.files) {
+      for (const file of req.files) {
+        fs.unlink(file.path, () => {});
+        fs.unlink(`${file.path}-compressed.webp`, () => {});
+      }
+    }
     next(err);
   }
 }

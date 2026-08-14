@@ -1,6 +1,8 @@
 'use strict';
 
 const db = require('../config/database');
+const sharp = require('sharp');
+const fs = require('fs');
 
 /**
  * GET /api/v1/vehicles
@@ -113,7 +115,17 @@ async function uploadV5(req, res, next) {
       return res.status(400).json({ status: 'error', message: 'Vehicle is already verified.' });
     }
 
-    const imageUrl = `/public/uploads/${req.file.filename}`;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const outputPath = `${req.file.path}-compressed.webp`;
+    
+    await sharp(req.file.path)
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toFile(outputPath);
+      
+    fs.unlinkSync(req.file.path);
+    
+    const imageUrl = `${baseUrl}/uploads/${req.file.filename}-compressed.webp`;
 
     // Insert verification request and update vehicle status in a transaction
     await db.transaction(async (trx) => {
@@ -156,6 +168,7 @@ async function syncVehicles(req, res, next) {
       const existingVehicles = await trx('vehicles').where({ owner_id: userId }).select('registration_number');
       const existingRegs = new Set(existingVehicles.map(v => v.registration_number));
 
+      const vehiclesToInsert = [];
       for (const v of vehicles) {
         if (!v.registrationNumber) continue;
         const reg = v.registrationNumber.replace(/\s+/g, '').toUpperCase();
@@ -164,7 +177,7 @@ async function syncVehicles(req, res, next) {
           continue; // Skip duplicate registrations
         }
 
-        await trx('vehicles').insert({
+        vehiclesToInsert.push({
           owner_id: userId,
           registration_number: reg,
           make: v.make,
@@ -175,6 +188,10 @@ async function syncVehicles(req, res, next) {
           v5_status: 'UNVERIFIED',
         });
         existingRegs.add(reg);
+      }
+      
+      if (vehiclesToInsert.length > 0) {
+        await trx('vehicles').insert(vehiclesToInsert);
       }
     });
 

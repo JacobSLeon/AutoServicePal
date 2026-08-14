@@ -9,6 +9,8 @@ import Card from '../components/Card';
 import { crossPlatformAlert } from '../utils/alert';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { mapApiVehicle } from '../utils/vehicleMapper';
+
 export default function AddVehicleScreen({ navigation, route }: any) {
   const initialReg = route?.params?.initialReg || '';
   const [regNumber, setRegNumber] = useState(initialReg);
@@ -49,20 +51,14 @@ export default function AddVehicleScreen({ navigation, route }: any) {
           
           const v = response.data.vehicle;
           
-          dispatch(addLocalVehicle({
-            id: v.id.toString(),
-            registrationNumber: v.registration_number,
-            make: v.make,
-            model: v.model,
-            colour: v.colour,
-            motStatus: data.motStatus || 'Unknown',
-            motDueDate: data.motExpiryDate || 'Unknown',
-            taxStatus: data.taxStatus || 'Unknown',
-            taxDueDate: data.taxDueDate || 'Unknown',
-            isVerified: false,
-            v5_status: v.v5_status || 'UNVERIFIED',
-            isGuest: false,
-          }));
+          // Use mapper for the response, but merge DVLA data (motStatus etc) since backend doesn't fetch it yet
+          const mappedCloudVehicle = mapApiVehicle(v, false);
+          mappedCloudVehicle.motStatus = data.motStatus || 'Unknown';
+          mappedCloudVehicle.motDueDate = data.motExpiryDate || 'Unknown';
+          mappedCloudVehicle.taxStatus = data.taxStatus || 'Unknown';
+          mappedCloudVehicle.taxDueDate = data.taxDueDate || 'Unknown';
+          
+          dispatch(addLocalVehicle(mappedCloudVehicle));
           
           crossPlatformAlert('Success', 'Vehicle added to your account.', [
             { text: 'OK', onPress: () => navigation.goBack() }
@@ -71,20 +67,21 @@ export default function AddVehicleScreen({ navigation, route }: any) {
           crossPlatformAlert('Error', err?.data?.message || 'Failed to add vehicle to your account.');
         }
       } else {
-        dispatch(addLocalVehicle({
-          id: new Date().getTime().toString(),
+        // For guest, DVLA data is the API data
+        const guestVehicle = mapApiVehicle({
+          id: new Date().getTime(),
           registrationNumber: data.registrationNumber,
           make: data.make,
           model: data.model || 'Unknown Model',
           colour: data.colour,
           motStatus: data.motStatus,
-          motDueDate: data.motExpiryDate,
+          motExpiryDate: data.motExpiryDate,
           taxStatus: data.taxStatus,
           taxDueDate: data.taxDueDate,
-          isVerified: false,
-          v5_status: 'UNVERIFIED',
-          isGuest: true,
-        }));
+        }, true);
+        
+        dispatch(addLocalVehicle(guestVehicle));
+        
         crossPlatformAlert('Success', 'Vehicle added locally as a Guest.', [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);

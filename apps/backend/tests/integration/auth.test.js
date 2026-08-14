@@ -25,6 +25,8 @@ process.env.EMAIL_SECURE = 'false';
 process.env.EMAIL_USER = 'test';
 process.env.EMAIL_PASS = 'test';
 process.env.EMAIL_FROM = 'test@test.com';
+process.env.ENCRYPTION_KEY = '12345678901234567890123456789012';
+process.env.BLIND_INDEX_KEY = '12345678901234567890123456789012';
 
 // ── Mock database ──────────────────────────────────────────────────────────
 const mockDbInsert = jest.fn();
@@ -57,9 +59,11 @@ jest.mock('../../src/config/database', () => {
 // ── Mock email service ─────────────────────────────────────────────────────
 const mockSendLockoutAlert = jest.fn().mockResolvedValue(undefined);
 const mockSendTemporaryPassword = jest.fn().mockResolvedValue(undefined);
+const mockSendWelcomeEmail = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../src/services/emailService', () => ({
   sendLockoutAlert: mockSendLockoutAlert,
   sendTemporaryPassword: mockSendTemporaryPassword,
+  sendWelcomeEmail: mockSendWelcomeEmail,
 }));
 
 // ── Import app after mocks are set up ─────────────────────────────────────

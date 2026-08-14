@@ -2,37 +2,65 @@
 
 const crypto = require('crypto');
 
-// The ENCRYPTION_KEY must be 32 bytes (256 bits)
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '12345678901234567890123456789012'; 
+// The keys must be provided by the environment
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const BLIND_INDEX_KEY = process.env.BLIND_INDEX_KEY;
 
-// For deterministic encryption (so we can query by email), we use a static IV.
-// In a highly secure production system, you'd use a blind index (hash) for querying
-// and non-deterministic encryption for storage.
-const IV_LENGTH = 16;
-const STATIC_IV = Buffer.alloc(IV_LENGTH, 0); 
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
+  throw new Error('[crypto] ENCRYPTION_KEY must be exactly 32 characters.');
+}
+if (!BLIND_INDEX_KEY || BLIND_INDEX_KEY.length !== 32) {
+  throw new Error('[crypto] BLIND_INDEX_KEY must be exactly 32 characters.');
+}
+
+const keyBuf = Buffer.from(ENCRYPTION_KEY);
+const blindKeyBuf = Buffer.from(BLIND_INDEX_KEY, 'hex');
+
+function blindIndex(text) {
+  if (!text) return text;
+  return crypto.createHmac('sha256', blindKeyBuf)
+    .update(text.toLowerCase())
+    .digest('hex');
+}
 
 function encrypt(text) {
   if (!text) return text;
-  // Use aes-256-cbc for encryption
-  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), STATIC_IV);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv('aes-256-cbc', keyBuf, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  return encrypted;
+  return `${iv.toString('hex')}:${encrypted}`;
 }
 
 function decrypt(text) {
   if (!text) return text;
+  if (!text.includes(':')) {
+    // Fallback for legacy static IV data if any remains
+    try {
+      const STATIC_IV = Buffer.alloc(16, 0);
+      const decipher = crypto.createDecipheriv('aes-256-cbc', keyBuf, STATIC_IV);
+      let decrypted = decipher.update(text, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (err) {
+      return text;
+    }
+  }
+
   try {
-    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), STATIC_IV);
-    let decrypted = decipher.update(text, 'hex', 'utf8');
+    const [ivHex, ctHex] = text.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', keyBuf, iv);
+    let decrypted = decipher.update(ctHex, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (err) {
-    return text; // Return original if decryption fails (e.g., it was plaintext)
+    return text;
   }
 }
 
 module.exports = {
   encrypt,
-  decrypt
+  decrypt,
+  blindIndex
 };
