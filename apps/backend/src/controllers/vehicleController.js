@@ -193,6 +193,7 @@ async function syncVehicles(req, res, next) {
       motStatus: 'Unknown', // Need DVLA api data for this, defaulting
       taxStatus: 'Unknown',
       isVerified: v.is_v5_verified,
+      v5_status: v.v5_status,
     }));
 
     return res.status(200).json({

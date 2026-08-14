@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, ActivityIndicator, Image } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { removeVehicle } from '../store/slices/vehicleSlice';
+import { removeVehicle, updateVehicle } from '../store/slices/vehicleSlice';
 import * as ImagePicker from 'expo-image-picker';
 import { useUploadV5Mutation, useGetServiceHistoryQuery } from '../store/api/apiSlice';
 import { crossPlatformAlert } from '../utils/alert';
@@ -78,6 +78,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
 
       try {
         await uploadV5({ vehicleId: vehicle.id, formData }).unwrap();
+        dispatch(updateVehicle({ id: vehicle.id, changes: { v5_status: 'PENDING' } }));
         crossPlatformAlert('Success', 'V5 document uploaded and is awaiting verification.');
       } catch (err) {
         crossPlatformAlert('Upload Failed', 'There was an error uploading your document.');
@@ -108,7 +109,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
         </View>
         <View style={styles.historyCardRight}>
           <Button 
-            title="View / Edit" 
+            title="View Details" 
             variant="danger"
             onPress={() => navigation.navigate('ServiceHistory', { vehicleId: vehicle.id })}
             style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
@@ -118,14 +119,14 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     );
   };
 
-  const canAddService = isAuthenticated && vehicle.isVerified;
+  const canAddService = isAuthenticated && !vehicle.isGuest;
 
   return (
     <View style={styles.container}>
       {/* Red Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTopRow}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="home" size={28} color="#FFF" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => (navigation as any).openDrawer?.()}>
@@ -151,20 +152,22 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
 
       <View style={styles.content}>
         {/* Permission / Action Banner */}
-        {!canAddService ? (
+        {(!isAuthenticated || !vehicle.isVerified) && (
           <View style={styles.warningBanner}>
             {!isAuthenticated ? (
               <Text style={styles.warningBannerText}>Log in to access service record</Text>
             ) : (
-              <Text style={styles.warningBannerText}>V5 Pending Verification</Text>
+              <Text style={styles.warningBannerText}>{vehicle.v5_status === 'PENDING' ? "V5 Pending Verification" : "V5 Verification Required"}</Text>
             )}
             {!isAuthenticated ? (
               <Button title="Login" variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={() => navigation.navigate('Login')} />
-            ) : !vehicle.isVerified && (
-              <Button title={isUploading ? "Uploading..." : "Upload V5"} variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={handleUploadV5} disabled={isUploading} />
+            ) : (
+              <Button title={vehicle.v5_status === 'PENDING' ? "Pending Review" : (isUploading ? "Uploading..." : "Upload V5")} variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={handleUploadV5} disabled={isUploading || vehicle.v5_status === 'PENDING'} />
             )}
           </View>
-        ) : (
+        )}
+
+        {canAddService && (
           <View style={{ padding: theme.spacing.md }}>
             <Button 
               title="Add Service" 

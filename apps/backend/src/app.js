@@ -12,6 +12,9 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const Sentry = require('@sentry/node');
+const logger = require('./config/logger');
 
 const apiRouter = require('./routes/index');
 const { errorHandler } = require('./middlewares/errorHandler');
@@ -19,8 +22,27 @@ const { errorHandler } = require('./middlewares/errorHandler');
 function createApp() {
   const app = express();
 
+  // ── Sentry Init ─────────────────────────────────────────────────────────
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN || '',
+    environment: process.env.NODE_ENV || 'development',
+  });
+
   // ── Security headers ─────────────────────────────────────────────────────
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  }));
+
+  // ── Rate Limiting ────────────────────────────────────────────────────────
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 150, // Limit each IP to 150 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { status: 'error', message: 'Too many requests, please try again later.' }
+  });
+  // Apply the rate limiting middleware to all requests
+  app.use(limiter);
 
   // ── CORS ─────────────────────────────────────────────────────────────────
   // In production, restrict to the app's actual domain(s).
@@ -38,8 +60,12 @@ function createApp() {
 
   // ── Request Logging ───────────────────────────────────────────────────────
   // Skip logging in test environment to keep test output clean
+  // ── Static Files ──────────────────────────────────────────────────────────
+  const path = require('path');
+  app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
   if (process.env.NODE_ENV !== 'test') {
-    app.use(morgan('combined'));
+    app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
   }
 
   // ── Health Check ─────────────────────────────────────────────────────────
@@ -63,6 +89,10 @@ function createApp() {
   });
 
   // ── Global Error Handler ──────────────────────────────────────────────────
+  if (Sentry.setupExpressErrorHandler) {
+    Sentry.setupExpressErrorHandler(app);
+  }
+  
   // Must be registered last — Express identifies error handlers by 4 arguments
   app.use(errorHandler);
 

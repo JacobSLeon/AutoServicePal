@@ -22,6 +22,7 @@
 const db = require('../config/database');
 const emailService = require('../services/emailService');
 const { config } = require('../config/env');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 const MAX_ATTEMPTS = config.security.maxLoginAttempts;      // 10
 const LOCKOUT_HOURS = config.security.lockoutDurationHours; // 24
@@ -33,8 +34,9 @@ const LOCKOUT_HOURS = config.security.lockoutDurationHours; // 24
  * @returns {Promise<{ isLocked: boolean, secondsRemaining: number|null, user: object|null }>}
  */
 async function checkLockout(email) {
+  const encryptedEmail = encrypt(email.toLowerCase());
   const user = await db('users')
-    .where({ email: email.toLowerCase() })
+    .where({ email: encryptedEmail })
     .select('id', 'full_name_v5', 'email', 'password_hash', 'failed_login_attempts', 'locked_until', 'role')
     .first();
 
@@ -73,10 +75,11 @@ async function recordFailedAttempt(user) {
     updatePayload.locked_until = lockedUntil;
 
     // Fire-and-forget — do not block the response on email delivery
+    const plainEmail = decrypt(user.email);
     emailService
-      .sendLockoutAlert(user.email, user.full_name_v5)
+      .sendLockoutAlert(plainEmail, user.full_name_v5)
       .catch((err) => {
-        console.error(`[loginRateLimiter] Failed to send lockout email to ${user.email}:`, err.message);
+        console.error(`[loginRateLimiter] Failed to send lockout email to ${plainEmail}:`, err.message);
       });
   }
 

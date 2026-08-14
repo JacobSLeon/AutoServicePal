@@ -28,6 +28,7 @@ export const apiSlice = createApi({
         method: 'POST',
         body: formData,
       }),
+      invalidatesTags: ['Vehicle'],
     }),
     login: builder.mutation<any, any>({
       query: (credentials) => ({
@@ -65,6 +66,7 @@ export const apiSlice = createApi({
     }),
     getServiceHistory: builder.query<any, string>({
       query: (vehicleId) => `/services/vehicle/${vehicleId}`,
+      providesTags: ['Vehicle'],
     }),
     addServiceRecord: builder.mutation<any, any>({
       query: (serviceData) => ({
@@ -72,6 +74,15 @@ export const apiSlice = createApi({
         method: 'POST',
         body: serviceData,
       }),
+      invalidatesTags: ['Vehicle'],
+    }),
+    updateServiceRecord: builder.mutation<any, { id: string; serviceData: any }>({
+      query: ({ id, serviceData }) => ({
+        url: `/services/${id}`,
+        method: 'PUT',
+        body: serviceData,
+      }),
+      invalidatesTags: ['Vehicle'],
     }),
     uploadServiceProofs: builder.mutation<any, { serviceId: string; formData: FormData }>({
       query: ({ serviceId, formData }) => ({
@@ -89,6 +100,13 @@ export const apiSlice = createApi({
     }),
     getVehicles: builder.query<any, void>({
       query: () => '/vehicles',
+      providesTags: ['Vehicle'],
+    }),
+    deleteVehicle: builder.mutation<any, string>({
+      query: (id) => ({
+        url: `/vehicles/${id}`,
+        method: 'DELETE',
+      }),
     }),
     getPendingReviews: builder.query<any, void>({
       query: () => '/admin/pending',
@@ -125,8 +143,10 @@ export const {
   useSyncVehiclesMutation,
   useGetServiceHistoryQuery,
   useAddServiceRecordMutation,
+  useUpdateServiceRecordMutation,
   useUploadServiceProofsMutation,
   useAddVehicleMutation,
+  useDeleteVehicleMutation,
   useLazyGetVehiclesQuery,
   useGetPendingReviewsQuery,
   useReviewV5Mutation,

@@ -14,6 +14,9 @@
 
 const jwt = require('jsonwebtoken');
 const { config } = require('../config/env');
+const admin = require('../config/firebase');
+const db = require('../config/database');
+const { encrypt } = require('../utils/crypto');
 
 /**
  * Verifies the JWT from the Authorization header and populates req.user.
@@ -48,10 +51,37 @@ function authenticateToken(req, res, next) {
         message: 'Token has expired. Please log in again.',
       });
     }
-    return res.status(401).json({
-      status: 'error',
-      message: 'Invalid authentication token.',
-    });
+    
+    // Fallback: Try verifying as a Firebase ID token
+    admin.auth().verifyIdToken(token)
+      .then(async (decodedFirebaseToken) => {
+        try {
+          const email = decodedFirebaseToken.email;
+          if (!email) throw new Error('Firebase token missing email');
+          
+          const encryptedEmail = encrypt(email.toLowerCase());
+          const user = await db('users').where({ email: encryptedEmail }).first();
+          if (!user) throw new Error('User not found in DB');
+          
+          req.user = {
+            id: user.id,
+            email: email.toLowerCase(),
+            role: user.role,
+          };
+          return next();
+        } catch (dbErr) {
+          return res.status(401).json({
+            status: 'error',
+            message: 'Firebase authentication failed or user not registered.',
+          });
+        }
+      })
+      .catch((firebaseErr) => {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Invalid authentication token.',
+        });
+      });
   }
 }
 

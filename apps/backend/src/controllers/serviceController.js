@@ -1,6 +1,8 @@
 'use strict';
 
 const db = require('../config/database');
+const sharp = require('sharp');
+const fs = require('fs');
 
 /**
  * Helper to fetch a single service record by ID along with its work items and proofs
@@ -25,13 +27,29 @@ async function fetchFullServiceRecord(serviceRecordId) {
  */
 async function addServiceRecord(req, res, next) {
   try {
-    const { vehicle_id, service_type, service_date, work_items } = req.body;
+    const { vehicle_id, service_type, service_date, record_name, cost, provider_details, work_items } = req.body;
     const user_id = req.user.id;
 
     if (!vehicle_id || !service_type || !service_date || !work_items || !Array.isArray(work_items)) {
       return res.status(400).json({
         status: 'error',
         message: 'Missing required fields or work_items is not an array',
+      });
+    }
+
+    // Duplicate Entry Prevention
+    const duplicate = await db('service_records')
+      .where({
+        vehicle_id,
+        service_type,
+        service_date
+      })
+      .first();
+
+    if (duplicate) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'A duplicate service record for this vehicle, type, and date already exists.',
       });
     }
 
@@ -44,8 +62,8 @@ async function addServiceRecord(req, res, next) {
       });
     }
 
-    // Default record_name to Service-<YYYY-MM-DD>
-    const recordName = `Service-${service_date}`;
+    // Default record_name to Service-<YYYY-MM-DD> if not provided
+    const recordName = record_name || `Service-${service_date}`;
 
     // Start a transaction since we are inserting into multiple tables
     let serviceRecordId;
@@ -57,6 +75,9 @@ async function addServiceRecord(req, res, next) {
           record_name: recordName,
           service_type,
           service_date,
+          cost: cost || null,
+          provider_details: provider_details || null,
+          verification_status: 'UNVERIFIED',
         })
         .returning('id');
         
@@ -79,6 +100,55 @@ async function addServiceRecord(req, res, next) {
       status: 'success',
       data: fullRecord,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/v1/services/:id
+ * Update a service record and reset verification to PENDING
+ */
+async function updateServiceRecord(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { service_type, service_date, record_name, cost, provider_details } = req.body;
+    const user_id = req.user.id;
+
+    const record = await db('service_records').where({ id, user_id }).first();
+    if (!record) {
+      return res.status(404).json({ status: 'error', message: 'Service record not found or unauthorized' });
+    }
+
+    const recordName = record_name !== undefined ? record_name : (service_date ? `Service-${service_date}` : record.record_name);
+
+    await db('service_records').where({ id }).update({
+      service_type: service_type || record.service_type,
+      service_date: service_date || record.service_date,
+      record_name: recordName,
+      cost: cost !== undefined ? cost : record.cost,
+      provider_details: provider_details !== undefined ? provider_details : record.provider_details,
+      verification_status: 'PENDING'
+    });
+
+    if (req.body.work_items && Array.isArray(req.body.work_items)) {
+      await db.transaction(async (trx) => {
+        // Delete old work items
+        await trx('work_items').where({ service_record_id: id }).delete();
+        // Insert new ones
+        if (req.body.work_items.length > 0) {
+          const itemsToInsert = req.body.work_items.map((item) => ({
+            service_record_id: id,
+            item_key: item.item_key,
+            custom_description: item.custom_description || null,
+          }));
+          await trx('work_items').insert(itemsToInsert);
+        }
+      });
+    }
+
+    const fullRecord = await fetchFullServiceRecord(id);
+    res.status(200).json({ status: 'success', data: fullRecord });
   } catch (err) {
     next(err);
   }
@@ -161,13 +231,25 @@ async function uploadServiceProofs(req, res, next) {
       });
     }
 
-    // In a real environment, multer storage would save to S3/GCP and provide a URL.
-    // Since we are mocking storage locally in Phase 2/3, we construct a fake/local URL based on filename.
+    // Compress and resize images using sharp
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const proofsToInsert = req.files.map(file => ({
-      service_record_id: id,
-      image_url: `${baseUrl}/uploads/${file.filename}`,
-    }));
+    const proofsToInsert = [];
+    
+    for (const file of req.files) {
+      const outputPath = `${file.path}-compressed.webp`;
+      await sharp(file.path)
+        .resize({ width: 1200, withoutEnlargement: true }) // Resize to max 1200px width
+        .webp({ quality: 75 }) // Compress to WebP
+        .toFile(outputPath);
+      
+      // Remove the original uncompressed file
+      fs.unlinkSync(file.path);
+      
+      proofsToInsert.push({
+        service_record_id: id,
+        image_url: `${baseUrl}/uploads/${file.filename}-compressed.webp`,
+      });
+    }
 
     // Enforce max 10 proofs total (count existing)
     const existingCountResult = await db('service_proofs')
@@ -200,6 +282,7 @@ async function uploadServiceProofs(req, res, next) {
 
 module.exports = {
   addServiceRecord,
+  updateServiceRecord,
   getServiceHistory,
   uploadServiceProofs,
 };

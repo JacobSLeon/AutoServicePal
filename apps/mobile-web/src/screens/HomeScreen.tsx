@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, TextInput, Modal } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
+import { useDeleteVehicleMutation } from '../store/api/apiSlice';
 import { reorderVehicles, removeVehicle } from '../store/slices/vehicleSlice';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import InputField from '../components/InputField';
@@ -9,6 +10,7 @@ import UKNumberPlate from '../components/UKNumberPlate';
 import Button from '../components/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../utils/theme';
+import { crossPlatformAlert } from '../utils/alert';
 
 export default function HomeScreen({ navigation }: any) {
   const vehicles = useSelector((state: RootState) => state.vehicles.vehicles);
@@ -19,6 +21,7 @@ export default function HomeScreen({ navigation }: any) {
   
   // For the edit modal
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [deleteVehicleAPI] = useDeleteVehicleMutation();
 
   const filteredVehicles = useMemo(() => {
     if (!searchQuery) return vehicles;
@@ -39,7 +42,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const handleRemoveVehicle = () => {
     if (!selectedVehicle) return;
-    Alert.alert(
+    crossPlatformAlert(
       'Remove Vehicle',
       'Are you sure you want to remove this vehicle? This action cannot be undone.',
       [
@@ -47,7 +50,15 @@ export default function HomeScreen({ navigation }: any) {
         { 
           text: 'Remove', 
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            if (!selectedVehicle.isGuest) {
+              try {
+                await deleteVehicleAPI(selectedVehicle.id).unwrap();
+              } catch (err: any) {
+                crossPlatformAlert('Error', 'Failed to remove vehicle from the cloud server.');
+                return;
+              }
+            }
             dispatch(removeVehicle(selectedVehicle.id));
             setSelectedVehicle(null);
           }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLazyLookupVehicleQuery, useAddVehicleMutation } from '../store/api/apiSlice';
@@ -7,12 +7,25 @@ import { RootState } from '../store/store';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import { crossPlatformAlert } from '../utils/alert';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function AddVehicleScreen({ navigation }: any) {
-  const [regNumber, setRegNumber] = useState('');
+export default function AddVehicleScreen({ navigation, route }: any) {
+  const initialReg = route?.params?.initialReg || '';
+  const [regNumber, setRegNumber] = useState(initialReg);
   const [triggerLookup, { data, isLoading: isLookingUp, error }] = useLazyLookupVehicleQuery();
   const [addVehicleToCloud, { isLoading: isAdding }] = useAddVehicleMutation();
   const dispatch = useDispatch();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (initialReg) {
+        setRegNumber(initialReg);
+        triggerLookup(initialReg.toUpperCase());
+        // Clear the param so it doesn't persist across future visits to the tab
+        navigation.setParams({ initialReg: undefined });
+      }
+    }, [initialReg, triggerLookup, navigation])
+  );
 
   const token = useSelector((state: RootState) => state.auth.token);
   const isAuthenticated = !!token;
@@ -47,6 +60,7 @@ export default function AddVehicleScreen({ navigation }: any) {
             taxStatus: data.taxStatus || 'Unknown',
             taxDueDate: data.taxDueDate || 'Unknown',
             isVerified: false,
+            v5_status: v.v5_status || 'UNVERIFIED',
             isGuest: false,
           }));
           
@@ -68,6 +82,7 @@ export default function AddVehicleScreen({ navigation }: any) {
           taxStatus: data.taxStatus,
           taxDueDate: data.taxDueDate,
           isVerified: false,
+          v5_status: 'UNVERIFIED',
           isGuest: true,
         }));
         crossPlatformAlert('Success', 'Vehicle added locally as a Guest.', [

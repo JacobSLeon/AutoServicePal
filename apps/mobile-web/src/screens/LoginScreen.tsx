@@ -51,6 +51,7 @@ export default function LoginScreen({ navigation }: any) {
                 taxStatus: v.taxStatus || 'Unknown',
                 taxDueDate: v.taxDueDate,
                 isVerified: v.isVerified || false,
+                v5_status: v.v5_status || 'UNVERIFIED',
                 isGuest: false,
              }));
              dispatch(setVehicles(mergedVehicles));
@@ -74,6 +75,7 @@ export default function LoginScreen({ navigation }: any) {
                 motStatus: 'Unknown',
                 taxStatus: 'Unknown',
                 isVerified: v.is_v5_verified || false,
+                v5_status: v.v5_status || 'UNVERIFIED',
                 isGuest: false,
              }));
              dispatch(setVehicles(mappedVehicles));

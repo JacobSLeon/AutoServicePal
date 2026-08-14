@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image } from 'react-native';
 import { useGetServiceHistoryQuery } from '../store/api/apiSlice';
 import Card from '../components/Card';
+import Button from '../components/Button';
 import { theme } from '../utils/theme';
-export default function ServiceHistoryScreen({ route }: any) {
+export default function ServiceHistoryScreen({ route, navigation }: any) {
   const { vehicleId } = route.params;
   const { data, isLoading, error } = useGetServiceHistoryQuery(vehicleId);
 
@@ -76,6 +77,14 @@ export default function ServiceHistoryScreen({ route }: any) {
             <Text>{item.admin_note}</Text>
           </View>
         )}
+
+        <View style={{ marginTop: theme.spacing.md }}>
+          <Button 
+            title="Edit Service" 
+            variant="outline"
+            onPress={() => navigation.navigate('AddService', { vehicleId, editMode: true, existingRecord: item })}
+          />
+        </View>
       </Card>
     );
   };

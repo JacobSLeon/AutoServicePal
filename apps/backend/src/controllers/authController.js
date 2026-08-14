@@ -23,6 +23,7 @@ const { config } = require('../config/env');
 const { generateToken } = require('../middlewares/auth');
 const { checkLockout, recordFailedAttempt, recordSuccessfulLogin } = require('../middlewares/loginRateLimiter');
 const emailService = require('../services/emailService');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 const LOCKOUT_HOURS = config.security.lockoutDurationHours;
 
@@ -31,6 +32,7 @@ const LOCKOUT_HOURS = config.security.lockoutDurationHours;
 // ─────────────────────────────────────────────
 function sanitiseUser(user) {
   const { password_hash, failed_login_attempts, locked_until, ...safe } = user;
+  if (safe.email) safe.email = decrypt(safe.email);
   return safe;
 }
 
@@ -58,7 +60,7 @@ async function register(req, res, next) {
     const [newUser] = await db('users')
       .insert({
         full_name_v5,
-        email: email.toLowerCase(),
+        email: encrypt(email.toLowerCase()),
         password_hash,
         role: 'USER',
       })
@@ -66,9 +68,10 @@ async function register(req, res, next) {
 
     const token = generateToken(newUser);
 
+    const plainEmail = email.toLowerCase();
     // Send welcome email
-    emailService.sendWelcomeEmail(newUser.email, newUser.full_name_v5).catch(err => {
-      console.error(`[authController.register] Welcome email failed for ${newUser.email}:`, err.message);
+    emailService.sendWelcomeEmail(plainEmail, newUser.full_name_v5).catch(err => {
+      console.error(`[authController.register] Welcome email failed for ${plainEmail}:`, err.message);
     });
 
     return res.status(201).json({
@@ -110,7 +113,8 @@ async function login(req, res, next) {
     const { email, password } = req.body;
 
     // Step 1: Check lockout state AND retrieve user in one DB call
-    const { isLocked, secondsRemaining, user } = await checkLockout(email);
+    // Note: checkLockout now expects the plain email and will encrypt it internally
+    const { isLocked, secondsRemaining, user } = await checkLockout(email.toLowerCase());
 
     // Step 2: User not found — return generic 401 (no email enumeration)
     if (!user) {
@@ -191,8 +195,9 @@ async function forgotPassword(req, res, next) {
   try {
     const { email } = req.body;
 
+    const encryptedEmail = encrypt(email.toLowerCase());
     const user = await db('users')
-      .where({ email: email.toLowerCase() })
+      .where({ email: encryptedEmail })
       .select('id', 'full_name_v5', 'email')
       .first();
 
@@ -218,10 +223,11 @@ async function forgotPassword(req, res, next) {
     });
 
     // Dispatch the email (fire-and-forget — do not expose delivery errors to client)
+    const plainEmail = email.toLowerCase();
     emailService
-      .sendTemporaryPassword(user.email, user.full_name_v5, tempPassword)
+      .sendTemporaryPassword(plainEmail, user.full_name_v5, tempPassword)
       .catch((err) => {
-        console.error(`[authController.forgotPassword] Email delivery failed for ${user.email}:`, err.message);
+        console.error(`[authController.forgotPassword] Email delivery failed for ${plainEmail}:`, err.message);
       });
 
     return res.status(200).json({

@@ -2,6 +2,7 @@
 
 const db = require('../config/database');
 const emailService = require('../services/emailService');
+const admin = require('../config/firebase');
 
 /**
  * POST /api/v1/admin/v5-review/:id
@@ -39,6 +40,13 @@ async function reviewV5(req, res, next) {
           is_v5_verified: status === 'APPROVED',
           v5_status: status,
         });
+
+      await trx('admin_logs').insert({
+        admin_id: req.user.id,
+        action_type: 'V5_REVIEW',
+        target_id: v5Id,
+        reason_notes: rejection_reason || null,
+      });
     });
 
     // Send email notification
@@ -153,7 +161,27 @@ async function verifyWorkItem(req, res, next) {
             admin_note: db.raw(`CASE WHEN admin_note IS NULL OR admin_note = '' THEN ? ELSE CONCAT(admin_note, CHR(10), ?) END`, [admin_note, admin_note])
           });
       }
+
+      await trx('admin_logs').insert({
+        admin_id: req.user.id,
+        action_type: 'WORK_ITEM_VERIFY',
+        target_id: workItemId,
+        reason_notes: admin_note || null,
+      });
     });
+
+    // Send FCM push notification if the user has registered FCM tokens
+    try {
+      const record = await db('service_records').where({ id: workItem.service_record_id }).first();
+      // Assuming a simplistic model where we send a message to a topic or if we have user tokens saved.
+      // Since user tokens aren't explicitly modeled in this schema, we simulate the FCM call.
+      if (admin.apps.length > 0 && record) {
+        // Pseudo-code for FCM: admin.messaging().sendToDevice(userTokens, payload);
+        console.log(`[adminController] Mock FCM sent to user ${record.user_id} for work item ${workItemId}`);
+      }
+    } catch (fcmErr) {
+      console.error('[adminController] FCM Error:', fcmErr.message);
+    }
 
     return res.status(200).json({
       status: 'success',

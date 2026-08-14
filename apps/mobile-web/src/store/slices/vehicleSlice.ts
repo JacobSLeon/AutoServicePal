@@ -11,6 +11,7 @@ export interface Vehicle {
   taxStatus: string;
   taxDueDate: string;
   isVerified: boolean; // V5 verified
+  v5_status?: string;
   isGuest: boolean; // Is it stored locally for guest only?
 }
 
@@ -42,8 +43,14 @@ const vehicleSlice = createSlice({
     reorderVehicles: (state, action: PayloadAction<Vehicle[]>) => {
       state.vehicles = action.payload;
     },
+    updateVehicle: (state, action: PayloadAction<{ id: string; changes: Partial<Vehicle> }>) => {
+      const index = state.vehicles.findIndex(v => v.id === action.payload.id);
+      if (index !== -1) {
+        state.vehicles[index] = { ...state.vehicles[index], ...action.payload.changes };
+      }
+    },
   },
 });
 
-export const { addVehicle, removeVehicle, setVehicles, reorderVehicles } = vehicleSlice.actions;
+export const { addVehicle, removeVehicle, setVehicles, reorderVehicles, updateVehicle } = vehicleSlice.actions;
 export default vehicleSlice.reducer;

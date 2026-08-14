@@ -23,8 +23,10 @@ async function runDailyReport() {
       .havingRaw('count(*) > 1');
 
     // 3. Account Deletions
-    // Note: Since soft delete / account deletion feature doesn't exist yet, this is mocked to 0.
-    const deletedAccounts = 0;
+    const [{ count: deletedAccounts }] = await db('admin_logs')
+      .where('action_type', 'ACCOUNT_DELETED')
+      .andWhere('created_at', '>=', yesterday)
+      .count('* as count');
 
     const report = {
       date: new Date().toISOString(),
@@ -74,13 +76,29 @@ async function runWeeklyReport() {
       .where('status', 'PENDING')
       .count('* as count');
 
+    // 5. User-to-Vehicle Distribution Breakdown
+    const distribution = await db('vehicles')
+      .select('owner_id')
+      .count('* as num_vehicles')
+      .groupBy('owner_id');
+
+    // Aggregate into buckets: 1 vehicle, 2 vehicles, 3+ vehicles
+    const vehicleBuckets = { '1': 0, '2': 0, '3+': 0 };
+    distribution.forEach(d => {
+      const n = parseInt(d.num_vehicles, 10);
+      if (n === 1) vehicleBuckets['1']++;
+      else if (n === 2) vehicleBuckets['2']++;
+      else if (n >= 3) vehicleBuckets['3+']++;
+    });
+
     const report = {
       date: new Date().toISOString(),
       type: 'WEEKLY',
       activeUsers7d: parseInt(activeUsersCount, 10),
       inactiveUsers30d: parseInt(inactiveUsersCount, 10),
       newServiceRecords7d: parseInt(newServicesCount, 10),
-      pendingV5Verifications: parseInt(newV5sCount, 10)
+      pendingV5Verifications: parseInt(newV5sCount, 10),
+      userToVehicleDistribution: vehicleBuckets
     };
 
     console.log('[cron] Weekly Report Generated:\n', JSON.stringify(report, null, 2));

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, 
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
-import { useAddServiceRecordMutation, useUploadServiceProofsMutation } from '../store/api/apiSlice';
+import { useAddServiceRecordMutation, useUploadServiceProofsMutation, useUpdateServiceRecordMutation } from '../store/api/apiSlice';
 import Card from '../components/Card';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
@@ -41,11 +41,35 @@ export default function AddServiceScreen({ route, navigation }: any) {
   const [showWorkItemModal, setShowWorkItemModal] = useState(false);
 
   const [addServiceRecord, { isLoading: isAdding }] = useAddServiceRecordMutation();
+  const [updateServiceRecord, { isLoading: isUpdating }] = useUpdateServiceRecordMutation();
   const [uploadServiceProofs, { isLoading: isUploading }] = useUploadServiceProofsMutation();
 
   useEffect(() => {
-    setRecordName(`Service-${date}`);
-  }, [date]);
+    if (editMode && existingRecord) {
+      setDate(new Date(existingRecord.service_date).toISOString().split('T')[0]);
+      setRecordName(existingRecord.record_name);
+      setIsDealer(existingRecord.service_type === 'Dealer');
+      
+      const newSelectedItems: { [key: string]: boolean } = {};
+      let customDesc = '';
+      if (existingRecord.work_items) {
+        existingRecord.work_items.forEach((wi: any) => {
+          newSelectedItems[wi.item_key] = true;
+          if (wi.item_key === 'Other' && wi.custom_description) {
+            customDesc = wi.custom_description;
+          }
+        });
+      }
+      setSelectedItems(newSelectedItems);
+      setCustomDescription(customDesc);
+    }
+  }, [editMode, existingRecord]);
+
+  useEffect(() => {
+    if (!editMode) {
+      setRecordName(`Service-${date}`);
+    }
+  }, [date, editMode]);
 
   const toggleItem = (key: string) => {
     setSelectedItems(prev => ({
@@ -97,22 +121,39 @@ export default function AddServiceScreen({ route, navigation }: any) {
       return;
     }
 
+    if (selectedItems['Other'] && !customDescription.trim()) {
+      crossPlatformAlert('Validation Error', 'Please provide a description for the "Other" work item.');
+      return;
+    }
+
     try {
-      const serviceResponse = await addServiceRecord({
+      let serviceId;
+      const serviceDataPayload = {
         vehicle_id: vehicleId,
+        service_date: date,
         record_name: recordName,
         service_type: isDealer ? 'Dealer' : 'Self',
-        service_date: date,
         work_items: workItems
-      }).unwrap();
+      };
 
-      const serviceId = serviceResponse.data.id;
+      if (editMode && existingRecord) {
+        await updateServiceRecord({
+          id: existingRecord.id,
+          serviceData: serviceDataPayload
+        }).unwrap();
+        serviceId = existingRecord.id;
+      } else {
+        const response = await addServiceRecord(serviceDataPayload).unwrap();
+        serviceId = response.data.id;
+      }
 
-      if (images.length > 0) {
+      // If new images were attached, upload them
+      const newImages = images.filter(img => !img.startsWith('http'));
+      if (newImages.length > 0) {
         const formData = new FormData();
 
-        for (let i = 0; i < images.length; i++) {
-          const compressedUri = await compressImage(images[i]);
+        for (let i = 0; i < newImages.length; i++) {
+          const compressedUri = await compressImage(newImages[i]);
           const filename = compressedUri.split('/').pop() || `image_${i}.jpg`;
 
           if (Platform.OS === 'web') {
@@ -135,17 +176,17 @@ export default function AddServiceScreen({ route, navigation }: any) {
         await uploadServiceProofs({ serviceId, formData }).unwrap();
       }
 
-      crossPlatformAlert('Success', 'Service record added successfully!', [
+      crossPlatformAlert('Success', editMode ? 'Service record updated successfully!' : 'Service record added successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
 
     } catch (err: any) {
       console.error(err);
-      crossPlatformAlert('Error', err?.data?.message || 'Failed to add service record.');
+      crossPlatformAlert('Error', err?.data?.message || (editMode ? 'Failed to update service record.' : 'Failed to add service record.'));
     }
   };
 
-  const isLoading = isAdding || isUploading;
+  const isLoading = isAdding || isUpdating || isUploading;
   const selectedCount = Object.keys(selectedItems).filter(k => selectedItems[k]).length;
   const top3 = Object.keys(selectedItems).filter(k => selectedItems[k]).slice(0, 3);
 

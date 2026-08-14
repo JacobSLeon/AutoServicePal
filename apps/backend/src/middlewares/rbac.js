@@ -39,6 +39,17 @@ function requireRole(...roles) {
       });
     }
 
+    // Strict admin credential check based on environment variables
+    if (req.user.role === 'ADMIN') {
+      const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+      if (!adminEmails.includes(req.user.email.toLowerCase())) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Access denied. Verified admin credentials not found in environment configuration.',
+        });
+      }
+    }
+
     return next();
   };
 }

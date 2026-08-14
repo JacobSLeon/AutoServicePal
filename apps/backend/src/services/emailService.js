@@ -197,7 +197,7 @@ async function sendV5VerificationEmail(email, status, vehicleName, reason) {
   await transporter.sendMail({
     from: config.email.from,
     to: email,
-    subject: \`V5 Verification \${isApproved ? 'Successful' : 'Rejected'}\`,
+    subject: `V5 Verification ${isApproved ? 'Successful' : 'Rejected'}`,
     html,
   });
 }
