@@ -7,9 +7,9 @@ export interface Vehicle {
   model: string;
   colour: string;
   motStatus: string;
-  motDueDate: string; // From DVLA
+  motDueDate?: string; // From DVLA
   taxStatus: string;
-  taxDueDate: string;
+  taxDueDate?: string;
   isVerified: boolean; // V5 verified
   v5_status?: string;
   isGuest: boolean; // Is it stored locally for guest only?
@@ -49,8 +49,11 @@ const vehicleSlice = createSlice({
         state.vehicles[index] = { ...state.vehicles[index], ...action.payload.changes };
       }
     },
+    clearNonGuestVehicles: (state) => {
+      state.vehicles = state.vehicles.filter(v => v.isGuest);
+    },
   },
 });
 
-export const { addVehicle, removeVehicle, setVehicles, reorderVehicles, updateVehicle } = vehicleSlice.actions;
+export const { addVehicle, removeVehicle, setVehicles, reorderVehicles, updateVehicle, clearNonGuestVehicles } = vehicleSlice.actions;
 export default vehicleSlice.reducer;

@@ -51,7 +51,7 @@ function requireRole(...roles) {
         }
         
         const plainEmail = decrypt(user.email).toLowerCase();
-        const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+        const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim().toLowerCase());
         
         if (!adminEmails.includes(plainEmail)) {
           return res.status(403).json({

@@ -11,21 +11,24 @@
 
 const bcrypt = require('bcryptjs');
 const { config } = require('../../config/env');
+const { encrypt, blindIndex } = require('../../utils/crypto');
 
 exports.seed = async function (knex) {
-  const email = process.env.ADMIN_EMAIL || 'admin@autoservicepal.com';
+  const email = (process.env.ADMIN_EMAIL || 'admin@autoservicepal.com').toLowerCase();
   const password = process.env.ADMIN_PASSWORD || 'AdminPass1!';
   const fullName = process.env.ADMIN_FULL_NAME || 'AutoServicePal Admin';
 
   const passwordHash = await bcrypt.hash(password, config.security.bcryptRounds);
+  const encryptedEmail = encrypt(email);
+  const emailIndex = blindIndex(email);
 
   await knex.raw(
     `
-    INSERT INTO users (full_name_v5, email, password_hash, role)
-    VALUES (?, ?, ?, 'ADMIN')
-    ON CONFLICT (email) DO NOTHING
+    INSERT INTO users (full_name_v5, email, email_index, password_hash, role)
+    VALUES (?, ?, ?, ?, 'ADMIN')
+    ON CONFLICT (email_index) DO UPDATE SET role = 'ADMIN'
     `,
-    [fullName, email, passwordHash]
+    [fullName, encryptedEmail, emailIndex, passwordHash]
   );
 
   console.info(`[seed] Admin user seeded: ${email}`);

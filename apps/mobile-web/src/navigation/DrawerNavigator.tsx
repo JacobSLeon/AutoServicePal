@@ -4,7 +4,8 @@ import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { logout } from '../store/slices/authSlice';
-import { useDeleteAccountMutation } from '../store/api/apiSlice';
+import { clearNonGuestVehicles } from '../store/slices/vehicleSlice';
+import { useDeleteAccountMutation, apiSlice } from '../store/api/apiSlice';
 import RootNavigator from './RootNavigator';
 import { theme } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,8 @@ function CustomDrawerContent(props: any) {
 
   const handleLogout = () => {
     dispatch(logout());
+    dispatch(clearNonGuestVehicles());
+    dispatch(apiSlice.util.resetApiState());
     props.navigation.closeDrawer();
   };
 
@@ -32,6 +35,8 @@ function CustomDrawerContent(props: any) {
           try {
             await deleteAccount().unwrap();
             dispatch(logout());
+            dispatch(clearNonGuestVehicles());
+            dispatch(apiSlice.util.resetApiState());
             props.navigation.closeDrawer();
           } catch (e: any) {
             crossPlatformAlert('Error', e?.data?.message || 'Failed to delete account');

@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, TextInput, Modal } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
-import { useDeleteVehicleMutation } from '../store/api/apiSlice';
-import { reorderVehicles, removeVehicle } from '../store/slices/vehicleSlice';
+import { useDeleteVehicleMutation, useGetVehiclesQuery } from '../store/api/apiSlice';
+import { reorderVehicles, removeVehicle, setVehicles } from '../store/slices/vehicleSlice';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import InputField from '../components/InputField';
 import UKNumberPlate from '../components/UKNumberPlate';
@@ -11,6 +11,8 @@ import Button from '../components/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../utils/theme';
 import { crossPlatformAlert } from '../utils/alert';
+import { useFocusEffect } from '@react-navigation/native';
+import { mapApiVehicle } from '../utils/vehicleMapper';
 
 export default function HomeScreen({ navigation }: any) {
   const vehicles = useSelector((state: RootState) => state.vehicles.vehicles);
@@ -22,6 +24,24 @@ export default function HomeScreen({ navigation }: any) {
   // For the edit modal
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [deleteVehicleAPI] = useDeleteVehicleMutation();
+
+  const { data: cloudData, refetch } = useGetVehiclesQuery(undefined, { skip: !isAuthenticated });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) {
+        refetch();
+      }
+    }, [isAuthenticated, refetch])
+  );
+
+  React.useEffect(() => {
+    if (cloudData?.data?.vehicles) {
+      const mappedVehicles = cloudData.data.vehicles.map((v: any) => mapApiVehicle(v, false));
+      // Only merge if not searching/dragging to avoid UI jumps, but for simplicity we just set
+      dispatch(setVehicles(mappedVehicles));
+    }
+  }, [cloudData, dispatch]);
 
   const filteredVehicles = useMemo(() => {
     if (!searchQuery) return vehicles;

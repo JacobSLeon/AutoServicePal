@@ -93,6 +93,7 @@ export const apiSlice = createApi({
         method: 'POST',
         body: formData,
       }),
+      invalidatesTags: ['Vehicle'],
     }),
     addVehicle: builder.mutation<{ status: string; data: { vehicle: any } }, any>({
       query: (vehicleData) => ({
@@ -150,6 +151,7 @@ export const {
   useUploadServiceProofsMutation,
   useAddVehicleMutation,
   useDeleteVehicleMutation,
+  useGetVehiclesQuery,
   useLazyGetVehiclesQuery,
   useGetPendingReviewsQuery,
   useReviewV5Mutation,

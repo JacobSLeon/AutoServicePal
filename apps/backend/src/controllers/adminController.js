@@ -119,13 +119,22 @@ async function getPendingReviews(req, res, next) {
 
     const formattedWorkItems = pendingWorkItems.map(wi => {
       const proofs = allProofs.filter(p => p.service_record_id === wi.service_record_id);
-      return { ...wi, proofs };
+      return { 
+        ...wi, 
+        proofs,
+        email: wi.email ? decrypt(wi.email) : '' 
+      };
     });
+
+    const formattedV5s = pendingV5s.map(v5 => ({
+      ...v5,
+      email: v5.email ? decrypt(v5.email) : ''
+    }));
 
     return res.status(200).json({
       status: 'success',
       data: {
-        pendingV5s,
+        pendingV5s: formattedV5s,
         pendingWorkItems: formattedWorkItems
       }
     });
