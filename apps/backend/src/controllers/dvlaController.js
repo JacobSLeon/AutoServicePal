@@ -29,20 +29,21 @@ async function lookupRegistration(req, res, next) {
           model: 'FIESTA',
           sub_model: 'ZETEC',
           colour: 'BLUE',
+          motStatus: 'Valid',
           motExpiryDate: '2026-10-15',
+          taxStatus: 'Taxed',
           taxDueDate: '2025-12-01',
         },
       });
     }
 
-    // Call Official DVLA API
-    const response = await fetch(apiUrl, {
-      method: 'POST',
+    // Call CheckCarDetails API
+    const requestUrl = `${apiUrl}?apikey=${apiKey}&vrm=${reg}`;
+    const response = await fetch(requestUrl, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
       },
-      body: JSON.stringify({ registrationNumber: reg }),
     });
 
     if (!response.ok) {
@@ -64,7 +65,9 @@ async function lookupRegistration(req, res, next) {
           model: 'GOLF',
           sub_model: 'MATCH',
           colour: 'BLACK',
+          motStatus: 'Valid',
           motExpiryDate: '2026-11-20',
+          taxStatus: 'Taxed',
           taxDueDate: '2025-11-20',
         },
       });
@@ -72,17 +75,19 @@ async function lookupRegistration(req, res, next) {
 
     const data = await response.json();
 
-    // Map DVLA response to our expected schema
+    // Map CheckCarDetails response to our expected schema
     return res.status(200).json({
       status: 'success',
       data: {
         registrationNumber: data.registrationNumber,
         make: data.make,
         model: data.model || 'Unknown', 
-        sub_model: 'Unknown', // DVLA often doesn't give a specific sub_model, just make/colour
+        sub_model: 'Unknown',
         colour: data.colour,
-        motExpiryDate: data.motExpiryDate, // yyyy-mm-dd
-        taxDueDate: data.taxDueDate,       // yyyy-mm-dd
+        motStatus: data.mot?.motStatus || 'Unknown',
+        motExpiryDate: data.mot?.motDueDate, // CheckCarDetails uses motDueDate for expiry
+        taxStatus: data.tax?.taxStatus || 'Unknown',
+        taxDueDate: data.tax?.taxDueDate,
       },
     });
   } catch (err) {

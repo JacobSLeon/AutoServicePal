@@ -123,6 +123,14 @@ export default function HomeScreen({ navigation }: any) {
              ) : (
                <Text style={styles.syncedBadge}>● Synced to Cloud</Text>
              )}
+             <View style={{ flexDirection: 'row', marginTop: 8 }}>
+               <Text style={{ fontSize: 12, fontWeight: 'bold', marginRight: 12, color: item.motStatus === 'Valid' ? theme.colors.secondary : theme.colors.error }}>
+                 MOT: {item.motStatus || 'Unknown'}
+               </Text>
+               <Text style={{ fontSize: 12, fontWeight: 'bold', color: item.taxStatus === 'Taxed' ? theme.colors.secondary : theme.colors.error }}>
+                 TAX: {item.taxStatus || 'Unknown'}
+               </Text>
+             </View>
            </View>
            
            <TouchableOpacity 

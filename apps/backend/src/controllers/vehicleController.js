@@ -31,7 +31,7 @@ async function getVehicles(req, res, next) {
 async function addVehicle(req, res, next) {
   try {
     const userId = req.user.id;
-    const { registration_number, make, model, sub_model, colour } = req.body;
+    const { registration_number, make, model, sub_model, colour, mot_status, mot_due_date, tax_status, tax_due_date } = req.body;
 
     const formattedReg = registration_number ? registration_number.replace(/\s+/g, '').toUpperCase() : '';
     if (!formattedReg || !/^[A-Z0-9]{2,8}$/.test(formattedReg)) {
@@ -46,6 +46,10 @@ async function addVehicle(req, res, next) {
         model,
         sub_model,
         colour,
+        mot_status,
+        mot_due_date,
+        tax_status,
+        tax_due_date,
         is_v5_verified: false,
         v5_status: 'UNVERIFIED',
       })
@@ -184,6 +188,10 @@ async function syncVehicles(req, res, next) {
           model: v.model,
           sub_model: v.sub_model || null,
           colour: v.colour,
+          mot_status: v.motStatus || v.mot_status || 'Unknown',
+          mot_due_date: v.motExpiryDate || v.motDueDate || v.mot_due_date || null,
+          tax_status: v.taxStatus || v.tax_status || 'Unknown',
+          tax_due_date: v.taxDueDate || v.tax_due_date || null,
           is_v5_verified: false,
           v5_status: 'UNVERIFIED',
         });
@@ -207,8 +215,10 @@ async function syncVehicles(req, res, next) {
       make: v.make,
       model: v.model,
       colour: v.colour,
-      motStatus: 'Unknown', // Need DVLA api data for this, defaulting
-      taxStatus: 'Unknown',
+      motStatus: v.mot_status || 'Unknown',
+      motDueDate: v.mot_due_date || null,
+      taxStatus: v.tax_status || 'Unknown',
+      taxDueDate: v.tax_due_date || null,
       isVerified: v.is_v5_verified,
       v5_status: v.v5_status,
     }));

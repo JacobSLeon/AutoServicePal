@@ -47,6 +47,10 @@ export default function AddVehicleScreen({ navigation, route }: any) {
             model: data.model || 'Unknown Model',
             sub_model: null,
             colour: data.colour,
+            mot_status: data.motStatus || 'Unknown',
+            mot_due_date: data.motExpiryDate || null,
+            tax_status: data.taxStatus || 'Unknown',
+            tax_due_date: data.taxDueDate || null,
           }).unwrap();
           
           const v = response.data.vehicle;
