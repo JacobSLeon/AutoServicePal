@@ -5,9 +5,9 @@ services:
     container_name: autoservicepal_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: autoservicepal
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: autoservicepal_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: autoservicepal
     ports:
       - '5432:5432'
     volumes:
@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
 
-  postgres_test:
+  postgres_test_db:
     image: postgres:15-alpine
     container_name: autoservicepal_postgres_test
     restart: unless-stopped
@@ -49,6 +49,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: autoservicepal_backend
+    restart: always
+    env_file:
+      - ./apps/backend/.env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:

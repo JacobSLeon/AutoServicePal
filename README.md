@@ -38,33 +38,35 @@ cp .env.example apps/backend/.env
 ### 3. Start Infrastructure (PostgreSQL + Redis)
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Verify services are healthy:
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ### 4. Run Database Migrations
 
 ```bash
-cd apps/backend
-npx knex migrate:latest
+docker compose exec backend npm run migrate
 ```
+
+The migration command must run inside the backend container because `postgres` is
+the Docker Compose service name. It is not resolvable from your host machine.
 
 ### 5. Seed the Admin User
 
 ```bash
-npx knex seed:run
+docker compose exec backend npm run seed
 ```
 
 ### 6. Start the Backend API
 
 ```bash
-npm run dev
-# API available at http://localhost:3001
+docker compose logs -f backend
+# API available at http://localhost:3000
 ```
 
 ---
@@ -90,17 +92,17 @@ autoservicepal/
 | `npm run backend` | Start backend dev server |
 | `npm run test:backend` | Run backend test suite |
 | `npm run test:backend:coverage` | Run tests with coverage report |
-| `docker-compose up -d` | Start PostgreSQL + Redis |
-| `docker-compose down` | Stop infrastructure |
-| `npx knex migrate:latest` | Apply pending migrations |
-| `npx knex migrate:rollback` | Rollback last migration batch |
-| `npx knex seed:run` | Run all seed files |
+| `docker compose up -d` | Start PostgreSQL + Redis + backend |
+| `docker compose down` | Stop all Compose services |
+| `docker compose exec backend npm run migrate` | Apply pending migrations |
+| `docker compose exec backend npm run migrate:rollback` | Rollback last migration batch |
+| `docker compose exec backend npm run seed` | Run all seed files |
 
 ---
 
 ## REST API
 
-Base URL: `http://localhost:3001/api/v1`
+Base URL: `http://localhost:3000/api/v1`
 
 ### Auth Endpoints
 | Method | Path | Description |
