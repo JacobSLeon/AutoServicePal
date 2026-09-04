@@ -260,10 +260,6 @@ export default function AddServiceScreen({ route, navigation }: any) {
             placeholder="Describe custom work..."
             value={customDescription}
             onChangeText={setCustomDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            style={styles.customDescriptionInput}
           />
         )}
 
@@ -313,6 +309,7 @@ export default function AddServiceScreen({ route, navigation }: any) {
       <Modal
         visible={showWorkItemModal}
         animationType="slide"
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowWorkItemModal(false)}
       >
         <View style={styles.modalHeader}>
@@ -429,11 +426,6 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
-  },
-  customDescriptionInput: {
-    minHeight: 112,
-    borderRadius: theme.borderRadius.md,
-    paddingTop: theme.spacing.md,
   },
   imageGrid: {
     flexDirection: 'row',
