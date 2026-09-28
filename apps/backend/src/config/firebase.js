@@ -6,7 +6,9 @@ const logger = require('./logger');
 // Initialize Firebase Admin App
 // In production, GOOGLE_APPLICATION_CREDENTIALS env var should point to the service account JSON
 try {
-  admin.initializeApp();
+  admin.initializeApp({
+    projectId: process.env.FIREBASE_PROJECT_ID || 'autoservicepal-dev'
+  });
   logger.info('Firebase Admin initialized successfully');
 } catch (error) {
   if (!/already exists/u.test(error.message)) {

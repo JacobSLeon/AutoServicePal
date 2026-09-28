@@ -14,6 +14,7 @@
 
 const jwt = require('jsonwebtoken');
 const { config } = require('../config/env');
+const { getAuth } = require('firebase-admin/auth');
 const admin = require('../config/firebase');
 const db = require('../config/database');
 const { blindIndex } = require('../utils/crypto');
@@ -45,6 +46,9 @@ async function authenticateToken(req, res, next) {
     };
     return next();
   } catch (err) {
+    if (err.name !== 'TokenExpiredError') {
+      console.error(`[authMiddleware] Local JWT verification failed:`, err);
+    }
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({
         status: 'error',
@@ -55,7 +59,7 @@ async function authenticateToken(req, res, next) {
   }
   
   try {
-    const decodedFirebaseToken = await admin.auth().verifyIdToken(token);
+    const decodedFirebaseToken = await getAuth().verifyIdToken(token);
     const email = decodedFirebaseToken.email;
     if (!email) throw new Error('Firebase token missing email');
     
@@ -70,6 +74,7 @@ async function authenticateToken(req, res, next) {
     };
     return next();
   } catch (err) {
+    console.error(`[authMiddleware] Token verification failed: ${err.message}`, err);
     return res.status(401).json({
       status: 'error',
       message: 'Invalid authentication token.',
