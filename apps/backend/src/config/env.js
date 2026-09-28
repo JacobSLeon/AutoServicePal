@@ -89,6 +89,17 @@ module.exports = {
         'https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles',
     },
 
+    dvsaMot: {
+      apiKey: process.env.DVSA_MOT_API_KEY,
+      apiUrl:
+        process.env.DVSA_MOT_API_URL ||
+        'https://history.mot.api.gov.uk/v1/trade/vehicles/registration',
+      clientId: process.env.DVSA_MOT_CLIENT_ID,
+      clientSecret: process.env.DVSA_MOT_CLIENT_SECRET,
+      tokenUrl: process.env.DVSA_MOT_TOKEN_URL,
+      scope: process.env.DVSA_MOT_SCOPE || 'https://tapi.dvsa.gov.uk/.default',
+    },
+
     cloudStorage: {
       provider: process.env.CLOUD_STORAGE_PROVIDER || 's3',
       bucket: process.env.CLOUD_STORAGE_BUCKET,

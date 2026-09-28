@@ -28,4 +28,7 @@ const dvlaRateLimiter = (() => {
 // GET /api/v1/dvla/lookup/:reg
 router.get('/lookup/:reg', dvlaRateLimiter, dvlaController.lookupRegistration);
 
+// GET /api/v1/dvla/mot/:reg
+router.get('/mot/:reg', dvlaRateLimiter, dvlaController.getMotHistory);
+
 module.exports = router;

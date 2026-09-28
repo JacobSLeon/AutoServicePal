@@ -25,6 +25,10 @@ export const apiSlice = createApi({
       query: (registrationNumber) => `/dvla/lookup/${encodeURIComponent(registrationNumber)}`,
       transformResponse: (response: any) => response.data,
     }),
+    getMotHistory: builder.query<any, string>({
+      query: (registrationNumber) => `/dvla/mot/${encodeURIComponent(registrationNumber)}`,
+      transformResponse: (response: any) => response.data,
+    }),
     uploadV5: builder.mutation<any, { vehicleId: string; formData: FormData }>({
       query: ({ vehicleId, formData }) => ({
         url: `/vehicles/${vehicleId}/v5`,
@@ -159,5 +163,7 @@ export const {
   useForgotPasswordMutation,
   useGetDailyReportQuery,
   useGetWeeklyReportQuery,
-  useDeleteAccountMutation
+  useDeleteAccountMutation,
+  useGetMotHistoryQuery,
+  useLazyGetMotHistoryQuery
 } = apiSlice;

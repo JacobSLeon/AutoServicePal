@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { removeVehicle, updateVehicle } from '../store/slices/vehicleSlice';
 import * as ImagePicker from 'expo-image-picker';
-import { useUploadV5Mutation, useGetServiceHistoryQuery } from '../store/api/apiSlice';
+import { useUploadV5Mutation, useGetServiceHistoryQuery, useGetMotHistoryQuery } from '../store/api/apiSlice';
 import { crossPlatformAlert } from '../utils/alert';
 import { theme } from '../utils/theme';
 import UKNumberPlate from '../components/UKNumberPlate';
@@ -23,6 +23,10 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
 
   const { data: historyData, isLoading: isLoadingHistory } = useGetServiceHistoryQuery(vehicleId, {
     skip: !vehicle || vehicle.isGuest
+  });
+
+  const { data: motData, isLoading: isLoadingMot } = useGetMotHistoryQuery(vehicle?.registrationNumber || '', {
+    skip: !vehicle || !vehicle.registrationNumber
   });
 
   const [uploadV5, { isLoading: isUploading }] = useUploadV5Mutation();
@@ -121,6 +125,30 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
 
   const canAddService = isAuthenticated && !vehicle.isGuest;
 
+  const renderMotItem = ({ item }: { item: any }) => {
+    const isPass = item.testResult === 'PASSED';
+    return (
+      <View style={[styles.historyCard, { borderLeftWidth: 4, borderLeftColor: isPass ? theme.colors.success : theme.colors.error }]}>
+        <View style={styles.historyCardCenter}>
+          <Text style={styles.historyDate}>Completed: {item.completedDate}</Text>
+          <Text style={styles.historyTitle}>{item.testResult}</Text>
+          {item.odometerValue && (
+            <Text style={styles.historyWorkText}>Mileage: {item.odometerValue} {item.odometerUnit}</Text>
+          )}
+          {item.rfrAndComments && item.rfrAndComments.length > 0 && (
+            <View style={{ marginTop: 4 }}>
+              {item.rfrAndComments.map((rfr: any, idx: number) => (
+                <Text key={idx} style={[styles.historyWorkText, { color: rfr.type === 'FAIL' ? theme.colors.error : theme.colors.textSecondary }]}>
+                  • {rfr.text}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Red Header Card */}
@@ -150,7 +178,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content}>
         {/* Permission / Action Banner */}
         {(!isAuthenticated || !vehicle.isVerified) && (
           <View style={styles.warningBanner}>
@@ -186,13 +214,31 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
             data={historyData?.data?.history || []}
             keyExtractor={(item) => item.id}
             renderItem={renderHistoryItem}
-            contentContainerStyle={{ paddingBottom: theme.spacing.xl, paddingHorizontal: theme.spacing.md }}
+            contentContainerStyle={{ paddingBottom: theme.spacing.md, paddingHorizontal: theme.spacing.md }}
             ListEmptyComponent={
               <Text style={styles.emptyHistory}>No service history recorded for this vehicle.</Text>
             }
+            scrollEnabled={false}
           />
         )}
-      </View>
+
+        <Text style={styles.sectionHeader}>MOT HISTORY</Text>
+        
+        {isLoadingMot ? (
+          <ActivityIndicator size="large" color={theme.colors.primary} style={{marginTop: 20}}/>
+        ) : (
+          <FlatList
+            data={motData?.motTests || []}
+            keyExtractor={(item) => item.motTestNumber}
+            renderItem={renderMotItem}
+            contentContainerStyle={{ paddingBottom: theme.spacing.xl, paddingHorizontal: theme.spacing.md }}
+            ListEmptyComponent={
+              <Text style={styles.emptyHistory}>No MOT history available.</Text>
+            }
+            scrollEnabled={false}
+          />
+        )}
+      </ScrollView>
     </View>
   );
 }
