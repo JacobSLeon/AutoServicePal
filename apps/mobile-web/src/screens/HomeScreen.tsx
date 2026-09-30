@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../utils/theme';
 import { crossPlatformAlert } from '../utils/alert';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { mapApiVehicle } from '../utils/vehicleMapper';
 
 export default function HomeScreen({ navigation }: any) {
@@ -158,8 +159,13 @@ export default function HomeScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* Red Header Banner */}
-      <View style={styles.redBanner}>
-        <Text style={styles.bannerTitle}>ADD VEHICLE</Text>
+      <LinearGradient
+        colors={['#FF416C', '#FF4B2B']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.redBanner}
+      >
+        <Text style={styles.bannerTitle}>MY GARAGE</Text>
         <View style={styles.inputRow}>
           <TextInput
             style={styles.regInput}
@@ -180,7 +186,7 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.authPillText}>SIGN IN / REGISTER</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </LinearGradient>
 
       {/* Search Bar (only if > 10 vehicles) */}
       {vehicles.length > 10 && (

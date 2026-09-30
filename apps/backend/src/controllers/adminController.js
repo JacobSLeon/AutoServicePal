@@ -96,11 +96,9 @@ async function getPendingReviews(req, res, next) {
       .join('service_records', 'work_items.service_record_id', 'service_records.id')
       .join('vehicles', 'service_records.vehicle_id', 'vehicles.id')
       .join('users', 'service_records.user_id', 'users.id')
-      // Only get work items that have proofs attached via a subquery or join
-      .whereExists(function() {
-        this.select('*').from('service_proofs').whereRaw('service_proofs.service_record_id = service_records.id');
-      })
+      // Removed the proofs whereExists filter so admins can see and explicitly reject items without proofs
       .where('work_items.is_verified', false)
+      .where('work_items.status', 'PENDING')
       .select(
         'work_items.id as work_item_id',
         'work_items.item_key',
@@ -162,14 +160,15 @@ async function verifyWorkItem(req, res, next) {
       await trx('work_items')
         .where({ id: workItemId })
         .update({
-          is_verified: status === 'APPROVED'
+          is_verified: status === 'APPROVED',
+          status: status
         });
 
       if (admin_note) {
         await trx('service_records')
           .where({ id: workItem.service_record_id })
           .update({
-            admin_note: db.raw(`CASE WHEN admin_note IS NULL OR admin_note = '' THEN ? ELSE CONCAT(admin_note, CHR(10), ?) END`, [admin_note, admin_note])
+            admin_note: db.raw(`CASE WHEN admin_note IS NULL OR admin_note = '' THEN ?::text ELSE CONCAT(admin_note, CHR(10), ?::text) END`, [admin_note, admin_note])
           });
       }
 

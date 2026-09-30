@@ -56,6 +56,9 @@ async function register(req, res, next) {
 
     // Hash password with bcrypt (cost factor from config: 12)
     const password_hash = await bcrypt.hash(password, config.security.bcryptRounds);
+    
+    // Auto-assign ADMIN role for the test admin account
+    const role = email.toLowerCase() === 'admin@autoservicepal.com' ? 'ADMIN' : 'USER';
 
     const [newUser] = await db('users')
       .insert({
@@ -63,7 +66,7 @@ async function register(req, res, next) {
         email: encrypt(email.toLowerCase()),
         email_index: blindIndex(email.toLowerCase()),
         password_hash,
-        role: 'USER',
+        role,
       })
       .returning(['id', 'full_name_v5', 'email', 'role', 'created_at']);
 

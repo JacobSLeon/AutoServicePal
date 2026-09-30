@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { logout } from '../store/slices/authSlice';
+import { clearNonGuestVehicles } from '../store/slices/vehicleSlice';
+import { apiSlice } from '../store/api/apiSlice';
 import HomeScreen from '../screens/HomeScreen';
 import AddVehicleScreen from '../screens/AddVehicleScreen';
 import AdminScreen from '../screens/AdminScreen';
@@ -66,7 +68,11 @@ function ProfileScreen({ navigation }: any) {
 
       {isAuthenticated && (
         <View style={styles.menuSection}>
-          {renderMenuItem('Log Out', () => dispatch(logout()), true)}
+          {renderMenuItem('Log Out', () => {
+            dispatch(apiSlice.util.resetApiState());
+            dispatch(clearNonGuestVehicles());
+            dispatch(logout());
+          }, true)}
         </View>
       )}
     </ScrollView>

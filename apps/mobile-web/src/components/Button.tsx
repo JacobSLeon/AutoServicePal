@@ -1,26 +1,38 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, TouchableOpacityProps, ActivityIndicator } from 'react-native';
+import React, { useRef } from 'react';
+import { Pressable, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../utils/theme';
 
-interface ButtonProps extends TouchableOpacityProps {
+interface ButtonProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'danger' | 'outline';
   isLoading?: boolean;
+  disabled?: boolean;
+  onPress?: () => void;
+  style?: any;
 }
 
-export default function Button({ title, variant = 'primary', isLoading, style, disabled, ...props }: ButtonProps) {
-  const getVariantStyles = () => {
-    switch (variant) {
-      case 'secondary':
-        return [styles.secondaryBtn, disabled && styles.disabledBtn];
-      case 'danger':
-        return [styles.dangerBtn, disabled && styles.disabledBtn];
-      case 'outline':
-        return [styles.outlineBtn, disabled && styles.disabledBtn];
-      case 'primary':
-      default:
-        return [styles.primaryBtn, disabled && styles.disabledBtn];
-    }
+export default function Button({ title, variant = 'primary', isLoading, style, disabled, onPress, ...props }: ButtonProps) {
+  const scaleValue = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    if (disabled || isLoading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.spring(scaleValue, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      speed: 20,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    if (disabled || isLoading) return;
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      useNativeDriver: true,
+      bounciness: 10,
+    }).start();
   };
 
   const getVariantTextStyles = () => {
@@ -33,23 +45,86 @@ export default function Button({ title, variant = 'primary', isLoading, style, d
       case 'outline':
         return styles.outlineText;
       default:
-        return styles.darkText;
+        return styles.lightText;
     }
   };
 
-  return (
-    <TouchableOpacity
-      style={[styles.baseBtn, ...getVariantStyles(), style]}
-      disabled={disabled || isLoading}
-      activeOpacity={0.8}
-      {...props}
-    >
+  const renderContent = () => (
+    <>
       {isLoading ? (
-        <ActivityIndicator color={variant === 'outline' ? theme.colors.primary : '#000'} />
+        <ActivityIndicator color={variant === 'outline' ? theme.colors.primary : '#FFF'} />
       ) : (
         <Text style={[styles.baseText, getVariantTextStyles()]}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </>
+  );
+
+  const buttonStyle = [styles.baseBtn, disabled && styles.disabledBtn, style];
+
+  if (variant === 'primary') {
+    return (
+      <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={disabled || isLoading}
+          {...props}
+        >
+          <LinearGradient
+            colors={['#FF416C', '#FF4B2B']} // Vibrant Red/Orange gradient
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={buttonStyle}
+          >
+            {renderContent()}
+          </LinearGradient>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
+  if (variant === 'secondary') {
+    return (
+      <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={disabled || isLoading}
+          {...props}
+        >
+          <LinearGradient
+            colors={['#00E676', '#00C853']} // Vibrant Green gradient
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={buttonStyle}
+          >
+            {renderContent()}
+          </LinearGradient>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
+  // Outline or Danger fallbacks
+  let fallbackStyle;
+  if (variant === 'danger') fallbackStyle = styles.dangerBtn;
+  if (variant === 'outline') fallbackStyle = styles.outlineBtn;
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || isLoading}
+        style={[buttonStyle, fallbackStyle]}
+        {...props}
+      >
+        {renderContent()}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -60,20 +135,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.shadows.subtle,
-  },
-  primaryBtn: {
-    backgroundColor: theme.colors.primary,
-  },
-  secondaryBtn: {
-    backgroundColor: theme.colors.secondary,
+    ...theme.shadows.glass, // Stronger shadow for premium feel
   },
   dangerBtn: {
     backgroundColor: theme.colors.error,
   },
   outlineBtn: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 2, // Thicker border for premium look
     borderColor: theme.colors.primary,
   },
   disabledBtn: {
@@ -81,14 +150,19 @@ const styles = StyleSheet.create({
   },
   baseText: {
     ...theme.typography.h3,
+    textTransform: 'uppercase', // More dynamic look
+    letterSpacing: 1,
   },
   darkText: {
-    color: '#000',
+    color: '#121212',
+    fontWeight: '900',
   },
   lightText: {
-    color: '#FFF',
+    color: '#FFFFFF',
+    fontWeight: '900',
   },
   outlineText: {
     color: theme.colors.primary,
+    fontWeight: '900',
   }
 });
