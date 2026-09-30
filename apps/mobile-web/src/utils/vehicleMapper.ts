@@ -14,5 +14,11 @@ export function mapApiVehicle(v: any, isGuest = false): Vehicle {
     isVerified: v.is_v5_verified ?? v.isVerified ?? false,
     v5_status: v.v5_status ?? 'UNVERIFIED',
     isGuest,
+    engineSize: v.engine_size ?? v.engineSize,
+    emissions: v.emissions,
+    latestMileage: v.latest_mileage ?? v.latestMileage,
+    averageYearlyMileage: v.average_yearly_mileage ?? v.averageYearlyMileage,
+    yearOfManufacture: v.year_of_manufacture ?? v.yearOfManufacture,
+    motHistory: typeof v.mot_history === 'string' ? JSON.parse(v.mot_history) : (v.mot_history ?? v.motHistory),
   };
 }

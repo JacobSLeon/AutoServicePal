@@ -14,8 +14,8 @@ import Button from '../components/Button';
 export default function VehicleDetailsScreen({ route, navigation }: any) {
   const { vehicleId } = route.params;
   const dispatch = useDispatch();
-  
-  const vehicle = useSelector((state: RootState) => 
+
+  const vehicle = useSelector((state: RootState) =>
     state.vehicles.vehicles.find(v => v.id === vehicleId)
   );
 
@@ -25,9 +25,12 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     skip: !vehicle || vehicle.isGuest
   });
 
-  const { data: motData, isLoading: isLoadingMot } = useGetMotHistoryQuery(vehicle?.registrationNumber || '', {
-    skip: !vehicle || !vehicle.registrationNumber
+  const { data: motData, isLoading: isLoadingMotQuery } = useGetMotHistoryQuery(vehicle?.registrationNumber || '', {
+    skip: !vehicle || !vehicle.registrationNumber || !!vehicle.motHistory
   });
+
+  const motHistoryArray = vehicle.motHistory || motData?.motTests || [];
+  const isLoadingMot = isLoadingMotQuery && !vehicle.motHistory;
 
   const [uploadV5, { isLoading: isUploading }] = useUploadV5Mutation();
 
@@ -46,7 +49,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     }
 
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
       crossPlatformAlert('Permission Denied', 'You need to grant camera roll permissions to upload an image.');
       return;
@@ -61,7 +64,7 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
     if (!result.canceled && result.assets.length > 0) {
       const asset = result.assets[0];
       const formData = new FormData();
-      
+
       if (Platform.OS === 'web') {
         try {
           const response = await fetch(asset.uri);
@@ -91,18 +94,18 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
   };
 
   const renderHistoryItem = ({ item }: { item: any }) => {
-    const summary = item.work_items?.length 
-      ? item.work_items.map((wi: any) => wi.item_key.replace(/_/g, ' ')).join(', ') 
+    const summary = item.work_items?.length
+      ? item.work_items.map((wi: any) => wi.item_key.replace(/_/g, ' ')).join(', ')
       : 'No specific work logged';
 
     return (
       <View style={styles.historyCard}>
         <View style={styles.historyCardLeft}>
           <View style={styles.historyTypeBadge}>
-            <Ionicons 
-              name={item.service_type === 'Dealer' ? 'business' : 'build'} 
-              size={24} 
-              color={theme.colors.primary} 
+            <Ionicons
+              name={item.service_type === 'Dealer' ? 'business' : 'build'}
+              size={24}
+              color={theme.colors.primary}
             />
           </View>
         </View>
@@ -112,8 +115,8 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
           <Text style={styles.historyWorkText} numberOfLines={2}>{summary}</Text>
         </View>
         <View style={styles.historyCardRight}>
-          <Button 
-            title="View Details" 
+          <Button
+            title="View Details"
             variant="danger"
             onPress={() => navigation.navigate('ServiceHistory', { vehicleId: vehicle.id })}
             style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
@@ -179,6 +182,30 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Specifications & Mileage */}
+        <View style={styles.specsContainer}>
+          <View style={styles.specBox}>
+            <Ionicons name="speedometer-outline" size={28} color={theme.colors.primary} style={{marginBottom: 4}} />
+            <Text style={styles.specValue}>{vehicle.latestMileage ? vehicle.latestMileage.toLocaleString() + ' mi' : 'Unknown'}</Text>
+            <Text style={styles.specLabel}>Latest Mileage</Text>
+          </View>
+          <View style={styles.specBox}>
+            <Ionicons name="calendar-outline" size={28} color={theme.colors.primary} style={{marginBottom: 4}} />
+            <Text style={styles.specValue}>{vehicle.averageYearlyMileage ? vehicle.averageYearlyMileage.toLocaleString() + ' mi/yr' : 'N/A'}</Text>
+            <Text style={styles.specLabel}>Avg. Yearly</Text>
+          </View>
+          <View style={styles.specBox}>
+            <Ionicons name="car-sport-outline" size={28} color={theme.colors.primary} style={{marginBottom: 4}} />
+            <Text style={styles.specValue}>{vehicle.engineSize ? vehicle.engineSize + ' cc' : 'Unknown'}</Text>
+            <Text style={styles.specLabel}>Engine Size</Text>
+          </View>
+          <View style={styles.specBox}>
+            <Ionicons name="leaf-outline" size={28} color={theme.colors.primary} style={{marginBottom: 4}} />
+            <Text style={styles.specValue}>{vehicle.emissions ? vehicle.emissions + ' g/km' : 'N/A'}</Text>
+            <Text style={styles.specLabel}>Emissions</Text>
+          </View>
+        </View>
+
         {/* Permission / Action Banner */}
         {(!isAuthenticated || !vehicle.isVerified) && (
           <View style={styles.warningBanner}>
@@ -188,27 +215,27 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
               <Text style={styles.warningBannerText}>{vehicle.v5_status === 'PENDING' ? "V5 Pending Verification" : "V5 Verification Required"}</Text>
             )}
             {!isAuthenticated ? (
-              <Button title="Login" variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={() => navigation.navigate('Login')} />
+              <Button title="Login" variant="outline" style={{ marginTop: 8, borderColor: '#FFF' }} onPress={() => navigation.navigate('Login')} />
             ) : (
-              <Button title={vehicle.v5_status === 'PENDING' ? "Pending Review" : (isUploading ? "Uploading..." : "Upload V5")} variant="outline" style={{marginTop: 8, borderColor: '#FFF'}} onPress={handleUploadV5} disabled={isUploading || vehicle.v5_status === 'PENDING'} />
+              <Button title={vehicle.v5_status === 'PENDING' ? "Pending Review" : (isUploading ? "Uploading..." : "Upload V5")} variant="outline" style={{ marginTop: 8, borderColor: '#FFF' }} onPress={handleUploadV5} disabled={isUploading || vehicle.v5_status === 'PENDING'} />
             )}
           </View>
         )}
 
         {canAddService && (
           <View style={{ padding: theme.spacing.md }}>
-            <Button 
-              title="Add Service" 
-              variant="primary" 
+            <Button
+              title="Add Service"
+              variant="primary"
               onPress={() => navigation.navigate('AddService', { vehicleId: vehicle.id })}
             />
           </View>
         )}
 
         <Text style={styles.sectionHeader}>SERVICE HISTORY</Text>
-        
+
         {isLoadingHistory ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={{marginTop: 20}}/>
+          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
         ) : (
           <FlatList
             data={historyData?.data?.history || []}
@@ -223,12 +250,12 @@ export default function VehicleDetailsScreen({ route, navigation }: any) {
         )}
 
         <Text style={styles.sectionHeader}>MOT HISTORY</Text>
-        
+
         {isLoadingMot ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={{marginTop: 20}}/>
+          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
         ) : (
           <FlatList
-            data={motData?.motTests || []}
+            data={motHistoryArray}
             keyExtractor={(item) => item.motTestNumber}
             renderItem={renderMotItem}
             contentContainerStyle={{ paddingBottom: theme.spacing.xl, paddingHorizontal: theme.spacing.md }}
@@ -297,10 +324,38 @@ const styles = StyleSheet.create({
   warningBanner: {
     backgroundColor: theme.colors.error,
     padding: theme.spacing.md,
-    margin: theme.spacing.md,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
     ...theme.shadows.subtle,
+  },
+  specsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: theme.spacing.md,
+    justifyContent: 'space-between',
+  },
+  specBox: {
+    width: '48%',
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.subtle,
+  },
+  specValue: {
+    ...theme.typography.body,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  specLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
   },
   warningBannerText: {
     ...theme.typography.h3,

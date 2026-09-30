@@ -61,7 +61,8 @@ autoservicepal/
   * Build PostgreSQL tables (`users`, `vehicles`, `v5_verifications`, `service_records`, `work_items`, `service_proofs`).
   * Build JWT/Firebase auth endpoints and 10-failed-attempt account lockout middleware[cite: 1, 2].
 * **Phase 2: DVLA API & Vehicle Management**
-  * Integrate DVLA Vehicle Enquiry Service API for registration lookup.
+  * Integrate DVLA Vehicle Enquiry Service API for registration lookup (Engine, Emissions, Tax).
+  * Integrate DVLA MOT History API for mileage tracking, average mileage calculation, and extended MOT history.
   * Build guest local mode, cloud vehicle sync, drag-and-drop vehicle reordering, and search (for $>10$ cars).
   * Implement V5 document upload and Admin V5 review queue.
 * **Phase 3: Service Logging & Work Item Verification**

@@ -11,4 +11,10 @@ export interface Vehicle {
   isVerified: boolean;
   v5_status: 'UNVERIFIED' | 'PENDING' | 'APPROVED' | 'REJECTED';
   isGuest: boolean;
+  engineSize?: number;
+  emissions?: number;
+  latestMileage?: number;
+  averageYearlyMileage?: number;
+  yearOfManufacture?: number;
+  motHistory?: any[];
 }

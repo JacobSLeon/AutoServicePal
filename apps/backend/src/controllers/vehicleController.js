@@ -3,6 +3,7 @@
 const db = require('../config/database');
 const sharp = require('sharp');
 const fs = require('fs');
+const dvlaService = require('../services/dvlaService');
 
 /**
  * GET /api/v1/vehicles
@@ -38,18 +39,31 @@ async function addVehicle(req, res, next) {
       return res.status(400).json({ status: 'error', message: 'Valid registration_number is required.' });
     }
 
+    // Try to fetch full profile from DVLA
+    const dvlaProfile = await dvlaService.getFullVehicleProfile(formattedReg);
+
+    const finalMake = dvlaProfile.make !== 'Unknown' ? dvlaProfile.make : make;
+    const finalModel = dvlaProfile.model !== 'Unknown' ? dvlaProfile.model : model;
+    const finalColour = dvlaProfile.colour !== 'Unknown' ? dvlaProfile.colour : colour;
+
     const [vehicle] = await db('vehicles')
       .insert({
         owner_id: userId,
         registration_number: formattedReg,
-        make,
-        model,
+        make: finalMake,
+        model: finalModel,
         sub_model,
-        colour,
-        mot_status,
-        mot_due_date,
-        tax_status,
-        tax_due_date,
+        colour: finalColour,
+        mot_status: dvlaProfile.motStatus !== 'Unknown' ? dvlaProfile.motStatus : mot_status,
+        mot_due_date: dvlaProfile.motDueDate || mot_due_date,
+        tax_status: dvlaProfile.taxStatus !== 'Unknown' ? dvlaProfile.taxStatus : tax_status,
+        tax_due_date: dvlaProfile.taxDueDate || tax_due_date,
+        engine_size: dvlaProfile.engineSize,
+        emissions: dvlaProfile.emissions,
+        latest_mileage: dvlaProfile.latestMileage,
+        average_yearly_mileage: dvlaProfile.averageYearlyMileage,
+        year_of_manufacture: dvlaProfile.yearOfManufacture,
+        mot_history: dvlaProfile.motHistory ? JSON.stringify(dvlaProfile.motHistory) : null,
         is_v5_verified: false,
         v5_status: 'UNVERIFIED',
       })
