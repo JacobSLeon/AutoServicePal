@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "mobile-web",
-    "slug": "mobile-web",
+    "name": "AutoServicePal",
+    "slug": "autoservicepal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.autoservicepal.app"
     },
     "android": {
+      "package": "com.autoservicepal.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

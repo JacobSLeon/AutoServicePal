@@ -3,6 +3,7 @@
 const db = require('../config/database');
 const sharp = require('sharp');
 const fs = require('fs');
+const s3Service = require('../services/s3Service');
 
 const VALID_WORK_ITEMS = new Set([
   'Oil & Filter', 'Air Filter', 'Cabin Filter', 'Fuel Filter',
@@ -295,9 +296,19 @@ async function uploadServiceProofs(req, res, next) {
       // Remove the original uncompressed file
       fs.unlinkSync(file.path);
       
+      let imageUrl = '';
+      if (process.env.CLOUD_STORAGE_PROVIDER === 's3') {
+        const s3Key = `service-proofs/${id}-${Date.now()}-${file.filename}.webp`;
+        imageUrl = await s3Service.uploadToS3(outputPath, 'image/webp', s3Key);
+        // Clean up local compressed file
+        fs.unlinkSync(outputPath);
+      } else {
+        imageUrl = `${baseUrl}/uploads/${file.filename}-compressed.webp`;
+      }
+      
       proofsToInsert.push({
         service_record_id: id,
-        image_url: `${baseUrl}/uploads/${file.filename}-compressed.webp`,
+        image_url: imageUrl,
       });
     }
 

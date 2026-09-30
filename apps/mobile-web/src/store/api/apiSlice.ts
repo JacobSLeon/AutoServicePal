@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 import type { Vehicle } from '../../types/vehicle';
 
 // For local testing on Android emulator use 10.0.2.2, for iOS simulator use localhost
-const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? 'http://localhost:3000/api/v1';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000/api/v1';
 
 export const apiSlice = createApi({
   reducerPath: 'api',

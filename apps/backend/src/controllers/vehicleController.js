@@ -4,6 +4,7 @@ const db = require('../config/database');
 const sharp = require('sharp');
 const fs = require('fs');
 const dvlaService = require('../services/dvlaService');
+const s3Service = require('../services/s3Service');
 
 /**
  * GET /api/v1/vehicles
@@ -143,7 +144,15 @@ async function uploadV5(req, res, next) {
       
     fs.unlinkSync(req.file.path);
     
-    const imageUrl = `${baseUrl}/uploads/${req.file.filename}-compressed.webp`;
+    let imageUrl = '';
+    if (process.env.CLOUD_STORAGE_PROVIDER === 's3') {
+      const s3Key = `v5-documents/${vehicleId}-${Date.now()}.webp`;
+      imageUrl = await s3Service.uploadToS3(outputPath, 'image/webp', s3Key);
+      // Clean up the local compressed file since it's now in S3
+      fs.unlinkSync(outputPath);
+    } else {
+      imageUrl = `${baseUrl}/uploads/${req.file.filename}-compressed.webp`;
+    }
 
     // Insert verification request and update vehicle status in a transaction
     await db.transaction(async (trx) => {
