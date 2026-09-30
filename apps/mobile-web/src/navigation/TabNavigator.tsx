@@ -7,6 +7,7 @@ import { logout } from '../store/slices/authSlice';
 import HomeScreen from '../screens/HomeScreen';
 import AddVehicleScreen from '../screens/AddVehicleScreen';
 import AdminScreen from '../screens/AdminScreen';
+import DriverScreen from '../screens/DriverScreen';
 import { theme } from '../utils/theme';
 
 const Tab = createBottomTabNavigator();
@@ -183,6 +184,7 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Garage" component={HomeScreen} options={{ title: 'My Garage' }} />
       <Tab.Screen name="AddVehicle" component={AddVehicleScreen} options={{ title: 'Add Vehicle' }} />
+      <Tab.Screen name="Driver" component={DriverScreen} options={{ title: 'Driver' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
       {user?.role === 'ADMIN' && (
         <Tab.Screen name="Admin" component={AdminScreen} options={{ title: 'Admin' }} />

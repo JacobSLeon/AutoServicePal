@@ -139,6 +139,18 @@ export const apiSlice = createApi({
     getWeeklyReport: builder.query<any, void>({
       query: () => '/reports/weekly',
     }),
+    getDriverProfile: builder.query<any, void>({
+      query: () => '/driver',
+      providesTags: ['Vehicle'], // Reusing Vehicle tag to simplify caching for now
+    }),
+    syncDriverProfile: builder.mutation<any, { licence_number: string }>({
+      query: (body) => ({
+        url: '/driver/sync',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Vehicle'],
+    }),
   }),
 });
 
@@ -165,5 +177,7 @@ export const {
   useGetWeeklyReportQuery,
   useDeleteAccountMutation,
   useGetMotHistoryQuery,
-  useLazyGetMotHistoryQuery
+  useLazyGetMotHistoryQuery,
+  useGetDriverProfileQuery,
+  useSyncDriverProfileMutation
 } = apiSlice;
