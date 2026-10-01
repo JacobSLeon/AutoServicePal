@@ -11,9 +11,10 @@ interface ButtonProps {
   disabled?: boolean;
   onPress?: () => void;
   style?: any;
+  textStyle?: any;
 }
 
-export default function Button({ title, variant = 'primary', isLoading, style, disabled, onPress, ...props }: ButtonProps) {
+export default function Button({ title, variant = 'primary', isLoading, style, textStyle, disabled, onPress, ...props }: ButtonProps) {
   const scaleValue = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -54,7 +55,7 @@ export default function Button({ title, variant = 'primary', isLoading, style, d
       {isLoading ? (
         <ActivityIndicator color={variant === 'outline' ? theme.colors.primary : '#FFF'} />
       ) : (
-        <Text style={[styles.baseText, getVariantTextStyles()]}>{title}</Text>
+        <Text style={[styles.baseText, getVariantTextStyles(), textStyle]}>{title}</Text>
       )}
     </>
   );
@@ -119,7 +120,7 @@ export default function Button({ title, variant = 'primary', isLoading, style, d
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || isLoading}
-        style={[buttonStyle, fallbackStyle]}
+        style={[styles.baseBtn, fallbackStyle, disabled && styles.disabledBtn, style]}
         {...props}
       >
         {renderContent()}

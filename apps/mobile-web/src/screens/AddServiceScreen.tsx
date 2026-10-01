@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Modal, TextInput, SafeAreaView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -315,23 +315,25 @@ export default function AddServiceScreen({ route, navigation }: any) {
         animationType="slide"
         onRequestClose={() => setShowWorkItemModal(false)}
       >
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Select Work Items</Text>
-          <TouchableOpacity onPress={() => setShowWorkItemModal(false)}>
-            <Text style={styles.modalDoneText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView style={styles.modalList}>
-          {WORK_ITEMS.map((item) => (
-            <CheckboxRow
-              key={item}
-              label={item}
-              isSelected={!!selectedItems[item]}
-              onToggle={() => toggleItem(item)}
-            />
-          ))}
-          <View style={{ height: 40 }} />
-        </ScrollView>
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Work Items</Text>
+            <TouchableOpacity onPress={() => setShowWorkItemModal(false)}>
+              <Text style={styles.modalDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalList}>
+            {WORK_ITEMS.map((item) => (
+              <CheckboxRow
+                key={item}
+                label={item}
+                isSelected={!!selectedItems[item]}
+                onToggle={() => toggleItem(item)}
+              />
+            ))}
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
 
     </ScrollView>

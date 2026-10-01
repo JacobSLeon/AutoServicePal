@@ -175,7 +175,7 @@ export default function HomeScreen({ navigation }: any) {
             onChangeText={setNewReg}
             autoCapitalize="characters"
           />
-          <Button title="GO" onPress={handleAddVehicle} style={{marginLeft: 8, paddingVertical: 12, backgroundColor: '#FFF'}} variant="outline" />
+          <Button title="GO" onPress={handleAddVehicle} style={{marginLeft: 8, paddingVertical: 12, backgroundColor: '#000', borderColor: '#000'}} textStyle={{color: '#FFF'}} variant="outline" />
         </View>
         
         {!isAuthenticated && (
